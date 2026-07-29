@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="scoreboard_bg">#060B14</color>
+    <color name="scoreboard_green">#4ADE97</color>
+</resources>

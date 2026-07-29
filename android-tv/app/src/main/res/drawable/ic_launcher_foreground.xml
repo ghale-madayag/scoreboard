@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive-icon foreground: the logo inset into the 108dp safe zone. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetBottom="30%"
+    android:insetLeft="20%"
+    android:insetRight="20%"
+    android:insetTop="30%">
+    <bitmap
+        android:gravity="center"
+        android:src="@drawable/depth_logo"
+        android:tint="#FFFFFF" />
+</inset>

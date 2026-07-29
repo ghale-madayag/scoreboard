@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Production traffic (cPanel site, intranet APIs, Azure charts) is all
+         HTTPS, so cleartext stays off in release builds.
+         The debug build overrides this file to allow plain HTTP, which is what
+         lets the app be pointed at a Vite dev server on the LAN for testing. -->
+    <base-config cleartextTrafficPermitted="false" />
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <!-- Android emulator's alias for the host machine -->
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

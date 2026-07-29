@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Legacy launcher icon for API < 26 (mipmap-anydpi-v26 supersedes this on
+     newer devices). Kept as XML so no binary density variants are needed. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/scoreboard_bg" />
+        </shape>
+    </item>
+    <item
+        android:bottom="14dp"
+        android:left="8dp"
+        android:right="8dp"
+        android:top="14dp">
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/depth_logo"
+            android:tint="#FFFFFF" />
+    </item>
+</layer-list>

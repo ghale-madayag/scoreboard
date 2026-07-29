@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Depth Scoreboard</string>
+    <string name="offline_title">Waiting for network…</string>
+    <string name="offline_body">The scoreboard will appear automatically once the connection is back.</string>
+</resources>

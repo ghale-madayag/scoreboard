@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Borderless, full-bleed, dark. Matches the scoreboard's #060B14 so there
+         is no white flash between app launch and the first painted frame. -->
+    <style name="Theme.Scoreboard" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowBackground">@color/scoreboard_bg</item>
+        <item name="android:colorBackground">@color/scoreboard_bg</item>
+        <item name="android:statusBarColor">@color/scoreboard_bg</item>
+        <item name="android:navigationBarColor">@color/scoreboard_bg</item>
+    </style>
+</resources>

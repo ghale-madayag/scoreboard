@@ -64,7 +64,11 @@ function BonusDonut({ gp, onTrack, paceLine }) {
             fill="none" stroke={color} strokeWidth="16" strokeLinecap={sweep > 0 ? 'round' : 'butt'}
             strokeDasharray={`${sweep * c} ${c}`}
             style={{
-              filter: `drop-shadow(0 0 10px ${onTrack ? 'rgba(74,222,151,0.5)' : 'rgba(240,131,107,0.5)'})`,
+              // Tight, low-alpha glow. A wide one (this was 10px at 0.5) reads
+              // as a blurry halo bleeding past the ring, and an SVG drop-shadow
+              // re-filters the arc every frame of the sweep, which the TV's GPU
+              // does not enjoy.
+              filter: `drop-shadow(0 0 4px ${onTrack ? 'rgba(74,222,151,0.3)' : 'rgba(240,131,107,0.3)'})`,
               transition: 'stroke-dasharray 1.4s cubic-bezier(0.22, 1, 0.36, 1)',
             }}
           />

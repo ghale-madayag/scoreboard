@@ -56,11 +56,24 @@ export function useGsapReveal() {
               ease: 'power3.out',
               stagger: mode === 'chars' ? 0.035 : 0.05,
               delay,
+              // Drop the inline transform/opacity once the reveal is done.
+              // Without this every split span keeps a transform and stays its
+              // own composited layer for the life of the slide — dozens of
+              // them on a big heading, which a TV's GPU renders with visible
+              // shimmer. Cleared, the text collapses back to a single layer.
+              clearProps: 'all',
             })
             return
           }
         }
-        gsap.from(el, { opacity: 0, y: 22, duration: 0.7, ease: 'power3.out', delay })
+        gsap.from(el, {
+          opacity: 0,
+          y: 22,
+          duration: 0.7,
+          ease: 'power3.out',
+          delay,
+          clearProps: 'all',
+        })
       })
     }, root)
     return () => ctx.revert()

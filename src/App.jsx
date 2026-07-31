@@ -21,12 +21,47 @@ import PhotoSlide from './components/slides/PhotoSlide.jsx'
 //   bottom always stay visible
 // - very odd ratios (crop would exceed ~10%): fall back to contain (bars)
 //   rather than cutting real content
+// documentElement.clientWidth/Height is the layout viewport and is the value TV
+// browsers get right most often; window.innerWidth can include browser chrome or
+// report a stale desktop-sized value. Take the smaller of the two so a viewport
+// that is over-reported never scales the board up past the panel.
+function viewport() {
+  const de = document.documentElement
+  const vw = Math.min(de?.clientWidth || Infinity, window.innerWidth || Infinity)
+  const vh = Math.min(de?.clientHeight || Infinity, window.innerHeight || Infinity)
+  return {
+    vw: Number.isFinite(vw) && vw > 0 ? vw : 1920,
+    vh: Number.isFinite(vh) && vh > 0 ? vh : 1080,
+  }
+}
+
 function useFitTransform() {
-  const [t, setT] = useState({ s: 1, x: 0, y: 0 })
+  const [t, setT] = useState({ s: 1, x: 0, y: 0, vw: 0, vh: 0 })
   useEffect(() => {
-    const fit = () => {
-      const vw = window.innerWidth
-      const vh = window.innerHeight
+    let raf = 0
+    let settleTimer = 0
+    let stableFor = 0
+    let last = { vw: 0, vh: 0 }
+
+    const apply = () => {
+      const { vw, vh } = viewport()
+
+      // Ignore sub-pixel noise. Without this the board can sit in a loop where
+      // two measurements differ by a fraction of a pixel and it rescales
+      // forever, which reads as flicker on screen.
+      if (Math.abs(vw - last.vw) < 2 && Math.abs(vh - last.vh) < 2) {
+        stableFor++
+        // Once the viewport has held still, stop polling entirely. Real resizes
+        // still come through the listeners below.
+        if (stableFor >= 3 && settleTimer) {
+          clearInterval(settleTimer)
+          settleTimer = 0
+        }
+        return
+      }
+      stableFor = 0
+      last = { vw, vh }
+
       const sx = vw / 1920
       const sy = vh / 1080
       const distortion = Math.max(sx, sy) / Math.min(sx, sy)
@@ -35,11 +70,53 @@ function useFitTransform() {
       const h = 1080 * s
       const x = (vw - w) / 2                     // center horizontally (negative = equal crop)
       const y = h > vh ? vh - h : (vh - h) / 2   // crop from the top only; bars split evenly
-      setT({ s, x, y })
+      setT((prev) =>
+        prev.s === s && prev.x === x && prev.y === y ? prev : { s, x, y, vw, vh }
+      )
     }
-    fit()
+
+    // Coalesce bursts of events into one measurement per frame.
+    const fit = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        apply()
+      })
+    }
+
+    apply()
+
+    // TV browsers are the reason this is not just a resize listener. Several
+    // report a desktop-sized viewport on first paint, settle to the real panel
+    // size a moment later, and never fire `resize` — which left the board
+    // scaled for 1920 on a smaller viewport, cropping the right and bottom
+    // edges off screen.
+    //
+    // Note there is deliberately NO ResizeObserver on the document here: the
+    // transform it triggers can change what the document reports, and the two
+    // feed each other into a visible flicker. Events plus a short settling
+    // poll that switches itself off are enough.
     window.addEventListener('resize', fit)
-    return () => window.removeEventListener('resize', fit)
+    window.addEventListener('orientationchange', fit)
+    window.addEventListener('load', fit)
+    window.visualViewport?.addEventListener('resize', fit)
+
+    settleTimer = setInterval(apply, 500)
+    // Hard stop: whatever happens, the poll is gone after 15s.
+    const stopPoll = setTimeout(() => {
+      if (settleTimer) clearInterval(settleTimer)
+      settleTimer = 0
+    }, 15000)
+
+    return () => {
+      window.removeEventListener('resize', fit)
+      window.removeEventListener('orientationchange', fit)
+      window.removeEventListener('load', fit)
+      window.visualViewport?.removeEventListener('resize', fit)
+      if (raf) cancelAnimationFrame(raf)
+      if (settleTimer) clearInterval(settleTimer)
+      clearTimeout(stopPoll)
+    }
   }, [])
   return t
 }
@@ -55,8 +132,10 @@ function photosOf(posts, tag) {
   return out
 }
 
+const isDebug = typeof location !== 'undefined' && /[?&]debug=1\b/.test(location.search)
+
 export default function App() {
-  const { data, lastUpdated, stale } = useScoreboardData()
+  const { data, lastUpdated, stale, ready } = useScoreboardData()
   const fit = useFitTransform()
 
   const slides = useMemo(() => {
@@ -101,6 +180,21 @@ export default function App() {
   }, [data])
 
   return (
+    <>
+      {/* Add ?debug=1 to the URL to read the real viewport numbers off the TV.
+          Deliberately OUTSIDE the scaled stage and in fixed px, so it stays
+          legible even when the scaling is the thing that is broken. */}
+      {isDebug && (
+        <div className="fit-debug">
+          <div>viewport {fit.vw} × {fit.vh}</div>
+          <div>innerW/H {window.innerWidth} × {window.innerHeight}</div>
+          <div>clientW/H {document.documentElement.clientWidth} × {document.documentElement.clientHeight}</div>
+          <div>dpr {window.devicePixelRatio}</div>
+          <div>scale {fit.s.toFixed(4)}</div>
+          <div>offset {Math.round(fit.x)}, {Math.round(fit.y)}</div>
+          <div>screen {window.screen?.width} × {window.screen?.height}</div>
+        </div>
+      )}
     <div
       className="stage"
       style={{
@@ -111,7 +205,11 @@ export default function App() {
         transformOrigin: 'top left',
       }}
     >
-      {slides.length ? (
+      {/* Hold the boot screen until the first fetch has settled. Without this
+          the slider starts on whatever slide happens to need no data (the
+          quote), then reorders under itself as each section arrives — so the
+          board appeared to "load on slide 2". */}
+      {ready && slides.length ? (
         <Slider slides={slides} />
       ) : (
         <div className="boot">Loading scoreboard…</div>
@@ -123,5 +221,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </>
   )
 }

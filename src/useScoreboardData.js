@@ -5,11 +5,19 @@ import { sydneyToday, sydneyHour } from './logic/quarter.js'
 const POLL_MS = 4 * 60 * 1000
 const JITTER_MS = 30 * 1000
 
+// After a failed first load, retry quickly instead of waiting out a full poll
+// interval — otherwise the board sits on a near-empty slide list for 4 minutes.
+const FIRST_RETRY_MS = 8 * 1000
+
 export function useScoreboardData() {
   const [data, setData] = useState({})
   const [lastUpdated, setLastUpdated] = useState(null)
   const [stale, setStale] = useState(false)
+  // False until the first fetch has settled, so the caller can hold the slider
+  // back rather than building it from a half-empty data set.
+  const [ready, setReady] = useState(false)
   const failures = useRef(0)
+  const readyRef = useRef(false)
   const day = useRef(sydneyToday())
   const reloadedToday = useRef(false)
 
@@ -33,12 +41,17 @@ export function useScoreboardData() {
         failures.current++
       }
       if (failures.current >= 3) setStale(true)
-      schedule()
+      const wasFirst = !readyRef.current
+      readyRef.current = true
+      setReady(true)
+      schedule(wasFirst && failures.current > 0)
     }
 
-    function schedule() {
+    function schedule(retrySoon = false) {
       if (cancelled) return
-      const delay = POLL_MS + (Math.random() * 2 - 1) * JITTER_MS
+      const delay = retrySoon
+        ? FIRST_RETRY_MS
+        : POLL_MS + (Math.random() * 2 - 1) * JITTER_MS
       timer = setTimeout(poll, delay)
     }
 
@@ -66,5 +79,5 @@ export function useScoreboardData() {
     }
   }, [])
 
-  return { data, lastUpdated, stale }
+  return { data, lastUpdated, stale, ready }
 }

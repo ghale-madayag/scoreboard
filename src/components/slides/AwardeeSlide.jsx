@@ -3,6 +3,9 @@ import TvHeader from '../TvHeader.jsx'
 import { hideOnError } from '../imgUtils.js'
 import { useGsapReveal } from '../../useGsapReveal.js'
 
+// The company core values, in order: they spell DEPTH.
+const CORE_VALUES = ['DEPENDABLE', 'EXCELLENCE', 'PERSONALISED', 'TENACIOUS', 'HONEST']
+
 // "TV Slide 5 – Core Values Award" design.
 export default function AwardeeSlide({ item }) {
   const reveal = useGsapReveal()
@@ -43,9 +46,9 @@ export default function AwardeeSlide({ item }) {
           </div>
           <div className="aw2-citation" data-gsap="rise" data-gsap-delay="0.35">{item._descriptions}</div>
           <div className="aw2-pills" data-gsap="rise" data-gsap-delay="0.6">
-            <span className="aw2-pill">CAN-DO ATTITUDE</span>
-            <span className="aw2-pill">HANDS-ON</span>
-            <span className="aw2-pill hl">ABSOLUTE RELIABILITY</span>
+            {CORE_VALUES.map((v) => (
+              <span className="aw2-pill" key={v}>{v}</span>
+            ))}
           </div>
         </div>
       </div>

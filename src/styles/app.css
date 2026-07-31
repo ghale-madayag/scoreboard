@@ -1,13 +1,48 @@
 /* Depth Logistics TV Scoreboard — full-screen slider, light theme (1920×1080)
    Motion system: GPU-friendly only (opacity / transform), no libraries. */
 
-/* Inter (variable, latin subset) — self-hosted so the TV never depends on a CDN */
+/* All three families are variable, latin-subset, self-hosted woff2 — the TV
+   never waits on a CDN. Previously Archivo and JetBrains Mono came from
+   fonts.googleapis.com, which cost a render-blocking stylesheet plus DNS+TLS to
+   two extra hosts before any text could paint. */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 400 800;
   font-display: swap;
   src: url('../assets/fonts/inter-latin.woff2') format('woff2');
+}
+/* Two axes: weight AND width. Both faces below point at this one file, so it is
+   downloaded once. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 400 800;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url('../assets/fonts/archivo-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('../assets/fonts/jetbrains-mono-latin.woff2') format('woff2');
+}
+
+/* "Archivo Expanded" is not a real family — the old Google Fonts request for it
+   returned nothing, so every rule naming it fell back to plain Archivo. That
+   fallback IS the look the board was signed off on, so this face deliberately
+   renders at normal width rather than the design's nominal expanded cut.
+   Declared explicitly (rather than left to fall back) so the headings never
+   flash a system font before Archivo loads. */
+@font-face {
+  font-family: 'Archivo Expanded';
+  font-style: normal;
+  font-weight: 400 800;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('../assets/fonts/archivo-latin.woff2') format('woff2');
 }
 
 /* Dark mode palette — same brand hues on deep navy surfaces */
@@ -62,6 +97,22 @@ html, body {
   justify-content: center;
   font-size: 34px;
   color: var(--muted);
+}
+
+/* ?debug=1 readout — sits outside the scaled stage on purpose */
+.fit-debug {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.85);
+  color: #4ADE97;
+  font-family: monospace;
+  font-size: 20px;
+  line-height: 1.45;
+  padding: 12px 18px;
+  border: 1px solid #4ADE97;
+  white-space: nowrap;
 }
 
 .stale-badge {
@@ -729,6 +780,7 @@ html, body {
 }
 .win2-cta {
   display: inline-block;
+  position: relative;
   padding: 14px 28px;
   background: rgba(74, 222, 151, 0.12);
   border: 1px solid rgba(74, 222, 151, 0.4);
@@ -736,11 +788,26 @@ html, body {
   font-weight: 700;
   font-size: 23px;
   color: #7CEBB6;
+}
+/* The glow lives on its own layer and only its OPACITY animates.
+   It used to animate box-shadow directly, which repaints a large blurred
+   region every frame — cheap on a desktop GPU, and the cause of visible
+   glitching on the TV. Opacity is composited, so the panel just fades a
+   ready-made layer up and down. */
+.win2-cta::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 70px rgba(74, 222, 151, 0.45);
+  pointer-events: none;
+  opacity: 0.45;
+  will-change: opacity;
   animation: trophyGlow 3.5s ease-in-out infinite;
 }
 @keyframes trophyGlow {
-  0%, 100% { box-shadow: 0 0 40px rgba(74, 222, 151, 0.25); }
-  50% { box-shadow: 0 0 70px rgba(74, 222, 151, 0.45); }
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 .win2-right {
   flex: 1;

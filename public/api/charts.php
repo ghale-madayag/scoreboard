@@ -13,6 +13,7 @@
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache');
+header_remove('X-Powered-By'); // Apache's Header unset can miss PHP's own copy
 
 const CACHE_TTL = 60; // seconds
 
@@ -29,7 +30,19 @@ if (!isset($UPSTREAMS[$dataset])) {
     exit;
 }
 
-$cacheFile = sys_get_temp_dir() . "/scoreboard-$dataset.json";
+// Cache beside the script, not in the system temp dir: on shared hosting
+// /tmp is world-writable and the filename is predictable, so another tenant
+// could pre-create the file and have us serve their bytes whenever the
+// upstream hiccups. This directory is owned by our own account, and the
+// .htaccess denies HTTP access to *.cache. Falls back to the temp dir only
+// if the docroot is not writable.
+$cacheDir = __DIR__ . '/cache';
+if (!is_dir($cacheDir)) {
+    @mkdir($cacheDir, 0700);
+}
+$cacheFile = is_dir($cacheDir) && is_writable($cacheDir)
+    ? "$cacheDir/$dataset.cache"
+    : sys_get_temp_dir() . "/scoreboard-$dataset.json";
 
 if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < CACHE_TTL) {
     readfile($cacheFile);

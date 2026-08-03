@@ -1,7 +1,19 @@
 # Depth Scoreboard — static SPA + PHP proxy
 Options -Indexes
 
+# The proxy's cache files live in api/cache/, and cacert.pem is only for
+# PHP's curl — neither is content anyone should fetch over HTTP.
+<FilesMatch "\.(cache|pem)$">
+  Require all denied
+</FilesMatch>
+
 <IfModule mod_headers.c>
+  # Baseline hardening. "always" so they apply to PHP responses too.
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "same-origin"
+  Header always unset X-Powered-By
+
   # index.html is the ONLY file with a stable name, and it names the hashed
   # asset files. If the TV caches it, it stays pinned to an old build forever
   # and no redeploy is ever picked up — so this must never be cached.

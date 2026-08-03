@@ -1,0 +1,18 @@
+---
+# cPanel git deployment (Git Version Control -> "Deploy HEAD Commit").
+#
+# Runs as the cPanel account user, so $HOME expands to /home/<user>.
+# The docroot below is the Document Root shown in cPanel -> Domains for
+# scoreboard.depthintranet.com — if that ever changes, change it here too.
+#
+# Only dist/ is copied: the docroot never sees sources, node config, or this
+# repo's history. dist/ is committed (the server has no Node to build with),
+# so a deploy is: npm run build -> commit -> push -> Pull/Deploy in cPanel.
+#
+# cp -R does not delete: old hashed assets linger in assets/ until cleaned
+# by hand, which is harmless — index.html only ever names the current ones.
+deployment:
+  tasks:
+    - export DEPLOYPATH="$HOME/scoreboard.depthintranet.com"
+    - /bin/mkdir -p "$DEPLOYPATH"
+    - /bin/cp -R dist/. "$DEPLOYPATH/"

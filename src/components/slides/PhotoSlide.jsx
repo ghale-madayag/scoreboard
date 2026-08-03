@@ -21,7 +21,6 @@ export default function PhotoSlide({ photo, kb = 'kb-in' }) {
         />
         <div className="daw2-scrim" />
       </div>
-      <div className="fin2-topbar" />
 
       <TvHeader title="Depth at Work" subtitle="Field Stories · On the Ground" />
 

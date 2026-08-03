@@ -107,8 +107,16 @@ class MainActivity : AppCompatActivity() {
         // Serve from cache when the network hiccups, but prefer fresh content.
         cacheMode = WebSettings.LOAD_DEFAULT
 
+        // The board is served over HTTPS and loads nothing from a third party —
+        // fonts are self-hosted and the Azure feed goes through the site's own
+        // /api/charts.php — so there is no reason to permit HTTP subresources
+        // on an HTTPS page. Allowing them would silently strip TLS from those
+        // requests and let anyone on the office network tamper with what the
+        // TV displays. Debug builds still reach a plain-HTTP dev server: that
+        // is a top-level load, governed by the debug network security config,
+        // not by this setting.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
         }
     }
 

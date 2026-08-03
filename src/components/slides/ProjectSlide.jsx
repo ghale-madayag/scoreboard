@@ -17,7 +17,6 @@ export default function ProjectSlide({ item }) {
   return (
     <div className="fin2 mp2" ref={reveal}>
       <div className="mp2-bg" />
-      <div className="fin2-topbar" />
 
       <TvHeader title="Featured Project" subtitle={`${sydneyYear()} · Company Mission`} />
 

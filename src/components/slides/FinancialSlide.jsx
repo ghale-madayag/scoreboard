@@ -131,7 +131,6 @@ export default function FinancialSlide({ grossProfit, jobs }) {
   return (
     <div className="fin2" ref={reveal}>
       <div className="fin2-bg" />
-      <div className="fin2-topbar" />
 
       <TvHeader title={`${qName} Performance`} subtitle="Gross Profit · vs Last Year" />
 

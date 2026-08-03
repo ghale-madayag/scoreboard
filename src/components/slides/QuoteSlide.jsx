@@ -33,7 +33,6 @@ export default function QuoteSlide({ item }) {
           </>
         )}
       </div>
-      <div className="fin2-topbar" />
 
       <TvHeader title="Focus of the Week" subtitle="Mindset · Depth Logistics" />
 

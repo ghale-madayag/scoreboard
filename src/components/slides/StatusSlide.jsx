@@ -17,7 +17,6 @@ export default function StatusSlide({ item }) {
         )}
         <div className="daw2-scrim" />
       </div>
-      <div className="fin2-topbar" />
 
       <TvHeader title="Status Board" subtitle="What's On Our Mind" />
 

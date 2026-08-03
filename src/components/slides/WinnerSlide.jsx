@@ -11,7 +11,6 @@ export default function WinnerSlide({ item }) {
   return (
     <div className="fin2 win2" ref={reveal}>
       <div className="win2-bg" />
-      <div className="fin2-topbar" />
       <i className="win2-confetti c1" />
       <i className="win2-confetti c2" />
       <i className="win2-confetti c3" />

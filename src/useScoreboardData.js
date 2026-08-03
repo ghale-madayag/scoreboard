@@ -17,13 +17,15 @@ export function useScoreboardData() {
   // back rather than building it from a half-empty data set.
   const [ready, setReady] = useState(false)
   const failures = useRef(0)
-  const readyRef = useRef(false)
   const day = useRef(sydneyToday())
   const reloadedToday = useRef(false)
 
   useEffect(() => {
     let timer
     let cancelled = false
+    // Local to this effect: written and read only inside poll(), never during
+    // render, so it does not need to be a ref.
+    let settled = false
 
     async function poll() {
       try {
@@ -41,8 +43,8 @@ export function useScoreboardData() {
         failures.current++
       }
       if (failures.current >= 3) setStale(true)
-      const wasFirst = !readyRef.current
-      readyRef.current = true
+      const wasFirst = !settled
+      settled = true
       setReady(true)
       schedule(wasFirst && failures.current > 0)
     }

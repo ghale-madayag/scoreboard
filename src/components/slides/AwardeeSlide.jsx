@@ -14,7 +14,6 @@ export default function AwardeeSlide({ item }) {
   return (
     <div className="fin2 aw2" ref={reveal}>
       <div className="aw2-bg" />
-      <div className="fin2-topbar" />
       <i className="win2-confetti a1" />
       <i className="win2-confetti a2" />
       <i className="win2-confetti a3" />

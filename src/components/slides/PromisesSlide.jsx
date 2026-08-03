@@ -33,7 +33,6 @@ export default function PromisesSlide({ item }) {
   return (
     <div className="fin2 pr2" ref={reveal}>
       <div className="pr2-bg" />
-      <div className="fin2-topbar" />
       <i className="win2-confetti p1" />
       <i className="win2-confetti p2" />
       <i className="win2-confetti p3" />
@@ -52,7 +51,10 @@ export default function PromisesSlide({ item }) {
               strokeLinecap={sweep > 0 ? 'round' : 'butt'}
               strokeDasharray={`${sweep * c} ${c}`}
               style={{
-                filter: 'drop-shadow(0 0 12px rgba(74,222,151,0.5))',
+                // Tight, low-alpha glow, matching the % Achieved donut: a wide
+                // one bleeds past the ring as a blurry halo, and the SVG filter
+                // re-runs over every frame of the sweep.
+                filter: 'drop-shadow(0 0 4px rgba(74,222,151,0.3))',
                 transition: 'stroke-dasharray 1.6s cubic-bezier(0.22, 1, 0.36, 1)',
               }}
             />

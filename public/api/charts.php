@@ -41,7 +41,17 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT        => 15,
     CURLOPT_CONNECTTIMEOUT => 10,
+
+    // The upstream is whitelisted above, but a redirect is not — without the
+    // two limits below, a hijacked or misconfigured Azure endpoint could bounce
+    // this request to an internal address (cloud metadata, localhost, another
+    // service on the cPanel host) and we would fetch it server-side and hand
+    // the body back to the browser. Redirects are allowed but kept short and
+    // HTTPS-only; the Azure endpoints do not currently redirect at all.
     CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_MAXREDIRS      => 2,
+    CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
+    CURLOPT_PROTOCOLS      => CURLPROTO_HTTPS,
 ]);
 // WAMP's PHP has no system CA bundle; use the one shipped alongside if present.
 $caFile = __DIR__ . '/cacert.pem';

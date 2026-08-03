@@ -24,7 +24,6 @@ export default function TermSlide({ item }) {
   return (
     <div className="fin2 tod2" ref={reveal}>
       <div className="gf2-bg" />
-      <div className="fin2-topbar" />
 
       <TvHeader title="Term of the Day" subtitle="Know Your Freight · Depth Trivia" />
 

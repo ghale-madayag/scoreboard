@@ -24,7 +24,6 @@ export default function RiddleSlide({ item }) {
   return (
     <div className="fin2 bc2" ref={reveal}>
       <div className="gf2-bg" />
-      <div className="fin2-topbar" />
 
       <TvHeader title="Brain Challenge" subtitle="Riddle of the Day · Depth Trivia" />
 

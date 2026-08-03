@@ -10,7 +10,6 @@ export default function FlagSlide({ item }) {
   return (
     <div className="fin2 gf2" ref={reveal}>
       <div className="gf2-bg" />
-      <div className="fin2-topbar" />
 
       <TvHeader title="Daily Challenge" subtitle="Around the World · Depth Trivia" />
 

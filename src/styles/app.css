@@ -30,20 +30,12 @@
   src: url('../assets/fonts/jetbrains-mono-latin.woff2') format('woff2');
 }
 
-/* "Archivo Expanded" is not a real family — the old Google Fonts request for it
-   returned nothing, so every rule naming it fell back to plain Archivo. That
-   fallback IS the look the board was signed off on, so this face deliberately
-   renders at normal width rather than the design's nominal expanded cut.
-   Declared explicitly (rather than left to fall back) so the headings never
-   flash a system font before Archivo loads. */
-@font-face {
-  font-family: 'Archivo Expanded';
-  font-style: normal;
-  font-weight: 400 800;
-  font-stretch: 100%;
-  font-display: swap;
-  src: url('../assets/fonts/archivo-latin.woff2') format('woff2');
-}
+/* NOTE: rules below say `font-family: 'Archivo Expanded', 'Archivo'`, but
+   "Archivo Expanded" is not a real family and no face is declared for it — the
+   old Google Fonts request for it returned nothing, so those rules have always
+   resolved to plain Archivo. That IS the look the board was signed off on, so
+   the name is left in place as a dead first entry rather than either declaring
+   a face for it (which would widen every heading) or touching 26 rules. */
 
 /* Dark mode palette — same brand hues on deep navy surfaces */
 :root {
@@ -155,6 +147,16 @@ html, body {
   z-index: 1;
   animation: slideOut 1.15s ease both;
 }
+/* The outgoing slide is NOT unmounted — Slider keeps it in the leaving slot for
+   the whole life of the next slide (9–18s). Without this its infinite
+   animations (border beams, confetti, ticker, pulses) would keep ticking
+   against a fully transparent layer forever, roughly doubling the board's
+   animation load on the weakest device in the fleet.
+   Only descendants are paused; the slot's own slideOut must keep running.
+   NB: adding `visibility: hidden` to slideOut's end frame would skip the
+   subtree in compositing too, but visibility animates DISCRETELY and would
+   flip at the 50% mark — popping the outgoing slide away mid-fade. */
+.slider-slide.leaving * { animation-play-state: paused; }
 /* empty slot before the first transition */
 .slider-slide.idle { opacity: 0; }
 
@@ -332,13 +334,6 @@ html, body {
     radial-gradient(900px 600px at 88% 92%, rgba(30, 120, 84, 0.14), transparent 60%);
   pointer-events: none;
 }
-.fin2-topbar {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #4ADE97 0%, #2E7DD1 45%, transparent 90%);
-}
-
 .fin2-head {
   display: flex;
   align-items: center;
@@ -567,7 +562,6 @@ html, body {
     linear-gradient(180deg, rgba(6, 11, 20, 0.55) 0%, rgba(6, 11, 20, 0) 18%, rgba(6, 11, 20, 0) 66%, rgba(6, 11, 20, 0.72) 100%);
   pointer-events: none;
 }
-.quote2 .fin2-topbar { z-index: 3; }
 .quote2 .fin2-head { z-index: 2; }
 
 .quote2-body {
@@ -655,7 +649,11 @@ html, body {
     radial-gradient(800px 600px at 88% 84%, rgba(30, 120, 84, 0.14), transparent 60%);
 }
 /* Full-bleed portrait. Framed high (25%) because heads sit in the upper part
-   of a portrait — a centred crop on a tall photo would cut the face off. */
+   of a portrait — a centred crop on a tall photo would cut the face off.
+   NB: every portrait is taller than 16:9, so cover crops VERTICALLY only and
+   the horizontal half of object-position does nothing here. Shifting the face
+   sideways needs the element widened and pinned to one edge, which also zooms
+   in and cost too much of the head — tried and reverted. */
 .quote2-face {
   position: absolute;
   inset: 0;
@@ -802,7 +800,6 @@ html, body {
   box-shadow: 0 0 70px rgba(74, 222, 151, 0.45);
   pointer-events: none;
   opacity: 0.45;
-  will-change: opacity;
   animation: trophyGlow 3.5s ease-in-out infinite;
 }
 @keyframes trophyGlow {
@@ -1375,11 +1372,6 @@ html, body {
   letter-spacing: 0.06em;
   color: #C6D3E4;
 }
-.aw2-pill.hl {
-  background: rgba(74, 222, 151, 0.12);
-  border-color: rgba(74, 222, 151, 0.4);
-  color: #7CEBB6;
-}
 
 /* ============ photo slide ("Depth at Work" design) ============ */
 
@@ -1398,7 +1390,6 @@ html, body {
   background: linear-gradient(180deg, rgba(6, 11, 20, 0.55) 0%, rgba(6, 11, 20, 0) 18%, rgba(6, 11, 20, 0) 60%, rgba(6, 11, 20, 0.78) 100%);
   pointer-events: none;
 }
-.daw2 .fin2-topbar { z-index: 3; }
 .daw2 .fin2-head { z-index: 2; }
 
 .daw2-body {

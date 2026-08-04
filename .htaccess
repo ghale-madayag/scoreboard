@@ -26,6 +26,14 @@ Options -Indexes
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # Certificate validation must be served from the real docroot. AutoSSL and
+  # Let's Encrypt prove domain ownership by fetching a token they write to
+  # .well-known/acme-challenge/, and the catch-all below would map that into
+  # dist/ and 404 it — so the certificate silently fails to issue or renew and
+  # the site starts erroring at the CDN. Verified: with this rule absent, a
+  # real challenge file in the docroot returns 404.
+  RewriteRule ^\.well-known/ - [L]
+
   # Already inside the build output — serve it and stop.
   RewriteRule ^dist/ - [L]
 

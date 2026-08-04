@@ -1,18 +1,29 @@
 ---
 # cPanel git deployment (Git Version Control -> "Deploy HEAD Commit").
 #
-# Runs as the cPanel account user, so $HOME expands to /home/<user>.
-# The docroot below is the Document Root shown in cPanel -> Domains for
-# scoreboard.depthintranet.com — if that ever changes, change it here too.
+# Runs as the cPanel account user, so $HOME is /home/<user>.
 #
-# Only dist/ is copied: the docroot never sees sources, node config, or this
-# repo's history. dist/ is committed (the server has no Node to build with),
-# so a deploy is: npm run build -> commit -> push -> Pull/Deploy in cPanel.
+# IMPORTANT: DEPLOYPATH must be the subdomain's Document Root, and that
+# Document Root must NOT be the repository checkout. Pointing a domain at the
+# checkout serves the source tree instead of the build — index.html then asks
+# the browser for /src/main.jsx, which no browser can execute, and vite.config,
+# docs and CLAUDE.md become readable over HTTP. That is exactly what happened
+# on the first attempt here.
 #
-# cp -R does not delete: old hashed assets linger in assets/ until cleaned
-# by hand, which is harmless — index.html only ever names the current ones.
+# Only dist/ is copied, so the docroot holds the built app and nothing else.
+# dist/ is committed because the server has no Node to build with.
+#
+# Deploy flow: npm run build -> commit -> push -> cPanel "Update from Remote"
+# then "Deploy HEAD Commit".
+#
+# To cut over to production, change DEPLOYPATH to:
+#   $HOME/scoreboard.depthintranet.com
+#
+# cp -R does not delete, so superseded hashed assets accumulate in assets/.
+# That is harmless — index.html only ever names the current ones — but the
+# folder is worth emptying by hand every few months.
 deployment:
   tasks:
-    - export DEPLOYPATH="$HOME/scoreboard.depthintranet.com"
+    - export DEPLOYPATH="$HOME/dev-scoreboard.depthintranet.com"
     - /bin/mkdir -p "$DEPLOYPATH"
     - /bin/cp -R dist/. "$DEPLOYPATH/"

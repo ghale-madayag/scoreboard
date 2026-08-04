@@ -1,0 +1,8 @@
+# Deliberately NOT "Disallow: /". Every response from this site carries
+# X-Robots-Tag: noindex (see .htaccess) — but a crawler can only obey that
+# if it is allowed to fetch. Blocking the crawl would freeze the old
+# WordPress-era entries for this domain in search results forever, because
+# nothing could ever come back to see that they are gone. Let them crawl,
+# let them read "noindex" on everything, and the domain drops out.
+User-agent: *
+Disallow:

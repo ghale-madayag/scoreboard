@@ -26,6 +26,14 @@ Options -Indexes
   Header always set Referrer-Policy "same-origin"
   Header always unset X-Powered-By
 
+  # Internal signage — keep the whole site out of search engines. The meta
+  # noindex in index.html only covers that one page; this header covers every
+  # response: the charts JSON, images, fonts. Goes hand in hand with
+  # robots.txt deliberately ALLOWING the crawl — engines must be able to
+  # fetch in order to read this header and drop the domain (including the
+  # old WordPress pages that lived on this URL) from their index.
+  Header always set X-Robots-Tag "noindex, nofollow, noarchive"
+
   # index.html is the ONLY file with a stable name, and it names the hashed
   # asset files. If the TV caches it, it stays pinned to an old build forever
   # and no redeploy is ever picked up — so this must never be cached.

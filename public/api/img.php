@@ -63,11 +63,20 @@ if (!is_dir($cacheDir)) {
 $wantsWebp = function_exists('imagewebp')
     && strpos(isset($_SERVER['HTTP_ACCEPT']) ? $_SERVER['HTTP_ACCEPT'] : '', 'image/webp') !== false;
 
-$key = 'img-' . sha1($src) . ($wantsWebp ? '-w' : '');
+// "img2": cache schema v2. v1 could store a truncated download (observed
+// live: an 86 KB half-webp served for a week as if real), so v1 entries are
+// simply never read again and age out via the GC below.
+$key = 'img2-' . sha1($src) . ($wantsWebp ? '-w' : '');
 
-// Occasionally sweep out cache files nothing has asked for in two weeks.
+// A cached file is only ever written after the completeness checks passed,
+// so serving it needs no re-validation.
+// Every response carries X-Img-Cache so cache behaviour is observable from
+// outside without exposing the cache itself (HTTP access to it is denied).
+
+// Occasionally sweep out cache files nothing has asked for in two weeks
+// (the img* pattern also collects retired v1 entries).
 if (mt_rand(1, 50) === 1) {
-    foreach ((glob("$cacheDir/img-*.cache") ?: []) as $old) {
+    foreach ((glob("$cacheDir/img*.cache") ?: []) as $old) {
         if (time() - (int) filemtime($old) > 2 * CACHE_TTL) {
             @unlink($old);
         }
@@ -80,6 +89,7 @@ foreach ((glob("$cacheDir/$key.*.cache") ?: []) as $hit) {
         $ext = strtolower(explode('.', basename($hit))[1]);
         if (isset($MIME[$ext])) {
             @touch($hit);
+            header('X-Img-Cache: hit');
             serveFile($hit, $ext, $MIME);
         }
     }
@@ -109,23 +119,58 @@ $caFile = __DIR__ . '/cacert.pem';
 if (is_file($caFile)) {
     curl_setopt($ch, CURLOPT_CAINFO, $caFile);
 }
-$body   = curl_exec($ch);
-$status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+$body     = curl_exec($ch);
+$status   = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+$expected = (float) curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
 curl_close($ch);
 
-$info  = ($body !== false && $status === 200 && strlen($body) <= MAX_BYTES)
-    ? @getimagesizefromstring($body)
-    : false;
+// A dying upstream can hand over HTTP 200 with only part of the file — that
+// half-image must never be cached OR served (a broken img fires onerror and
+// the slide hides it for its whole showing). Two independent checks: the
+// declared Content-Length when there was one, and each format's own
+// end-of-file marker, which a truncated file by definition lacks.
+function looksComplete($bytes, $type)
+{
+    $n = strlen($bytes);
+    if ($n < 32) {
+        return false;
+    }
+    switch ($type) {
+        case IMAGETYPE_JPEG:
+            return substr($bytes, -2) === "\xFF\xD9";
+        case IMAGETYPE_PNG:
+            return strpos(substr($bytes, -16), 'IEND') !== false;
+        case IMAGETYPE_GIF:
+            return substr($bytes, -1) === ';';
+        case IMAGETYPE_WEBP:
+            $riff = unpack('V', substr($bytes, 4, 4));
+            return $riff !== false && ($riff[1] + 8) <= $n;
+        default:
+            return true;
+    }
+}
+
+$complete = $body !== false
+    && $status === 200
+    && strlen($body) <= MAX_BYTES
+    && ($expected <= 0 || strlen($body) >= (int) $expected);
+
+$info = $complete ? @getimagesizefromstring($body) : false;
+if ($info !== false && !looksComplete($body, $info[2])) {
+    $info = false;
+}
 
 if ($info === false) {
-    // Upstream failed or sent a non-image: stale cache beats a broken slide,
-    // and the original URL beats nothing at all.
+    // Upstream failed, truncated the file, or sent a non-image: stale cache
+    // beats a broken slide, and the original URL beats nothing at all.
     foreach ((glob("$cacheDir/$key.*.cache") ?: []) as $hit) {
         $ext = strtolower(explode('.', basename($hit))[1]);
         if (isset($MIME[$ext])) {
+            header('X-Img-Cache: stale');
             serveFile($hit, $ext, $MIME);
         }
     }
+    header('X-Img-Cache: fallback');
     header('Location: ' . $src, true, 302);
     exit;
 }
@@ -185,10 +230,13 @@ if (in_array($type, $editable, true) && function_exists('imagecreatefromstring')
 }
 
 $cacheFile = "$cacheDir/$key.$outExt.cache";
-if (is_dir($cacheDir) && is_writable($cacheDir)) {
-    @file_put_contents($cacheFile, $out, LOCK_EX);
-}
+$stored    = is_dir($cacheDir) && is_writable($cacheDir)
+    && @file_put_contents($cacheFile, $out, LOCK_EX) === strlen($out);
 
+// "stored" next request serves from local disk; "nostore" means the cache
+// directory is not writable on this host and every request will re-fetch —
+// that is a deployment problem worth noticing from the outside.
+header('X-Img-Cache: ' . ($stored ? 'stored' : 'nostore'));
 header('Content-Type: ' . $MIME[$outExt]);
 header('Cache-Control: public, max-age=' . CACHE_TTL);
 header('Content-Length: ' . strlen($out));

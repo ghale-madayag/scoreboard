@@ -152,10 +152,21 @@ To check any of this after a change, serve `dist/` through Apache with
 
 ## Deployment
 
-See `docs/DEPLOY.md`. Short version: `npm run build`, then upload the contents of
-`dist/` to the subdomain docroot (it already contains `api/charts.php`,
-`api/cacert.pem` and `.htaccess`). Verify `/api/charts.php` returns JSON —
-it needs PHP 8.x with curl, which is a cPanel MultiPHP setting.
+See `docs/DEPLOY.md`. Short version: deployment is git-based. cPanel Git
+Version Control clones this repo **into the subdomain docroot**, and the
+repo-root `.htaccess` rewrites every request into `dist/` (requests already
+under `dist/` are served as-is, which is what stops the rewrite looping).
+So `dist/` is **committed** — the host has no Node and cannot build — and
+publishing is `npm run build` → commit → push → *Update from Remote* in
+cPanel. There is deliberately no `.cpanel.yml`: the copy step is redundant
+under the rewrite, and removing it also removes cPanel's "Deploy HEAD Commit"
+button, which could otherwise be aimed at the wrong docroot.
+
+Two independent checkouts, `dev-scoreboard.depthintranet.com` and
+`scoreboard.depthintranet.com`, so dev is a real staging gate. Verify
+`/api/charts.php` returns JSON — it needs PHP 8.x with curl, a cPanel MultiPHP
+setting — and that `/package.json` 404s, since the sources really are sitting
+in the docroot and only `.htaccess` hides them.
 
 `charts.php` is the only server code and the only thing with a security surface:
 a two-entry upstream whitelist, redirects capped at 2 and forced HTTPS-only

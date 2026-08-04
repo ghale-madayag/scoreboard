@@ -55,7 +55,15 @@ $cacheDir = __DIR__ . '/cache';
 if (!is_dir($cacheDir)) {
     @mkdir($cacheDir, 0700);
 }
-$key = 'img-' . sha1($src);
+
+// WebP is ~25–35% smaller than JPEG at the same visual quality, and every
+// browser pointed at this board supports it — but only convert when the
+// client says so (Accept: image/webp), with JPEG as the safe fallback.
+// The variant is part of the cache key so the two never cross.
+$wantsWebp = function_exists('imagewebp')
+    && strpos(isset($_SERVER['HTTP_ACCEPT']) ? $_SERVER['HTTP_ACCEPT'] : '', 'image/webp') !== false;
+
+$key = 'img-' . sha1($src) . ($wantsWebp ? '-w' : '');
 
 // Occasionally sweep out cache files nothing has asked for in two weeks.
 if (mt_rand(1, 50) === 1) {
@@ -131,37 +139,47 @@ if ($srcExt === 'jpeg') {
 $out    = $body;
 $outExt = $srcExt;
 
-// Downscale when it is worth it. GIFs pass through untouched (GD would drop
-// animation), as does anything already small enough — and everything passes
-// through if this host turns out to lack GD, which still leaves the caching
-// and same-origin wins intact.
-$resizable = [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP];
-if ($w > MAX_WIDTH && in_array($type, $resizable, true) && function_exists('imagecreatefromstring')) {
+// Downscale anything wider than the stage, and re-encode everything to the
+// smallest format the client accepts — even images that need no resizing
+// (a 1600px intranet JPEG still drops ~30% as WebP). GIFs pass through
+// untouched (GD would drop animation), and everything passes through if
+// this host turns out to lack GD, which still leaves the caching and
+// same-origin wins intact. A re-encode is only adopted if it actually came
+// out smaller, so nothing can ever get bigger through here.
+$editable = [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP];
+if (in_array($type, $editable, true) && function_exists('imagecreatefromstring')) {
     $im = @imagecreatefromstring($body);
     if ($im !== false) {
-        $small = imagescale($im, MAX_WIDTH, -1, IMG_BILINEAR_FIXED);
+        if ($w > MAX_WIDTH) {
+            $scaled = imagescale($im, MAX_WIDTH, -1, IMG_BILINEAR_FIXED);
+            if ($scaled !== false) {
+                imagedestroy($im);
+                $im = $scaled;
+            }
+        }
+        ob_start();
+        if ($wantsWebp) {
+            // Lossy WebP keeps alpha, so PNGs convert safely too.
+            $ok = imagewebp($im, null, 80);
+            $newExt = 'webp';
+        } elseif ($type === IMAGETYPE_PNG) {
+            // Keep PNG (may carry transparency); still far smaller at 1920.
+            imagesavealpha($im, true);
+            $ok = imagepng($im, null, 6);
+            $newExt = 'png';
+        } elseif ($type === IMAGETYPE_WEBP) {
+            $ok = imagewebp($im, null, 80);
+            $newExt = 'webp';
+        } else {
+            $ok = imagejpeg($im, null, 82);
+            $newExt = 'jpg';
+        }
+        $shrunk = ob_get_clean();
         imagedestroy($im);
-        if ($small !== false) {
-            ob_start();
-            if ($type === IMAGETYPE_PNG) {
-                // Keep PNG (may carry transparency); still far smaller at 1920.
-                imagesavealpha($small, true);
-                $ok = imagepng($small, null, 6);
-                $newExt = 'png';
-            } elseif ($type === IMAGETYPE_WEBP && function_exists('imagewebp')) {
-                $ok = imagewebp($small, null, 80);
-                $newExt = 'webp';
-            } else {
-                $ok = imagejpeg($small, null, 82);
-                $newExt = 'jpg';
-            }
-            $shrunk = ob_get_clean();
-            imagedestroy($small);
-            // Only adopt the re-encode if it actually helped.
-            if ($ok && $shrunk !== false && strlen($shrunk) > 0 && strlen($shrunk) < strlen($body)) {
-                $out    = $shrunk;
-                $outExt = $newExt;
-            }
+        // Only adopt the re-encode if it actually helped.
+        if ($ok && $shrunk !== false && strlen($shrunk) > 0 && strlen($shrunk) < strlen($body)) {
+            $out    = $shrunk;
+            $outExt = $newExt;
         }
     }
 }

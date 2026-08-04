@@ -7,6 +7,18 @@ Options -Indexes
   Require all denied
 </FilesMatch>
 
+# Defence in depth against a git checkout living inside the docroot: cPanel's
+# Git Version Control happily clones straight into the site directory, and that
+# publishes .git — full source and history — at a guessable URL. <Files> cannot
+# match a directory, so these are path-level 404s (404 rather than 403: a 403
+# confirms the path exists). The built site is only index.html, assets/ and
+# api/, so none of these names can be legitimate content here.
+<IfModule mod_alias.c>
+  RedirectMatch 404 (?i)/\.(git|env)(/|$)
+  RedirectMatch 404 (?i)/(node_modules|src|scripts|docs|android-tv|public)(/|$)
+  RedirectMatch 404 (?i)/(package(-lock)?\.json|vite\.config\.js|\.cpanel\.yml|[^/]*\.md)$
+</IfModule>
+
 <IfModule mod_headers.c>
   # Baseline hardening. "always" so they apply to PHP responses too.
   Header always set X-Content-Type-Options "nosniff"

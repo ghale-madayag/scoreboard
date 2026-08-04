@@ -17,9 +17,10 @@ const queued = new Set() // in the queue or in flight — no duplicates
 const queue = []
 let inFlight = 0
 
-// Two at a time: clears a full day's images well inside the financial
-// slide's 18s, without saturating the TV's flaky wifi link.
-const CONCURRENCY = 2
+// Three at a time: images now come same-origin and pre-shrunk via
+// api/img.php, so a slot is occupied for far less time than when this
+// pulled multi-MB originals straight from the intranet.
+const CONCURRENCY = 3
 // A hung request must not wedge the queue. Failures and timeouts are not
 // added to `done`, so the next poll (4 min) retries them.
 const TIMEOUT_MS = 30_000

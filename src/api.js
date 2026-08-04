@@ -20,10 +20,32 @@ function clean(value) {
   return value
 }
 
+// Intranet photos are full-size uploads (2500px+, multi-MB) on a slow host —
+// measured at 5–14s per image from the TV. Rewrite them to our resizing,
+// caching proxy so they arrive same-origin at ≤1920px. Absolute URL on
+// purpose: the preloader recognises image URLs by extension on an absolute
+// URL, and the proxied form still ends in the original's ".jpg".
+// In dev/preview a Vite middleware 302s these back to the original URL.
+const UPLOAD_RE = /^https:\/\/depthintranet\.com\/wp-content\/uploads\/\S+\.(jpe?g|png|webp|gif)$/i
+function proxyImages(value) {
+  if (typeof value === 'string') {
+    return UPLOAD_RE.test(value)
+      ? `${location.origin}/api/img.php?src=${encodeURIComponent(value)}`
+      : value
+  }
+  if (Array.isArray(value)) return value.map(proxyImages)
+  if (value && typeof value === 'object') {
+    const out = {}
+    for (const k of Object.keys(value)) out[k] = proxyImages(value[k])
+    return out
+  }
+  return value
+}
+
 async function getJson(url) {
   const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) throw new Error(`${res.status} ${url}`)
-  return clean(await res.json())
+  return proxyImages(clean(await res.json()))
 }
 
 const latest = (slug, limit = 1) =>

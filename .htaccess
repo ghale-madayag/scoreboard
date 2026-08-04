@@ -1,0 +1,49 @@
+# Repo-root .htaccess — ONLY used when a domain's Document Root is pointed at
+# this checkout rather than at a deploy directory.
+#
+# In that arrangement Apache would otherwise serve the source tree: the root
+# index.html is Vite's dev entry, so it hands the browser /src/main.jsx (raw
+# JSX it cannot execute — a blank page), and package.json, vite.config.js,
+# .cpanel.yml, docs/ and src/ are all readable over HTTP.
+#
+# So: map every request into dist/, which is the built site. Requests already
+# under dist/ are served as-is, which is what stops the rewrite looping —
+# after the substitution Apache reruns this file with the new path and the
+# first rule matches and halts. dist/.htaccess still applies to the resolved
+# file, so caching, compression and the security headers all behave exactly as
+# they would in a normal deploy.
+#
+# Anything that is not inside dist/ becomes a 404 by construction: /src/main.jsx
+# resolves to dist/src/main.jsx, which does not exist. The explicit denies below
+# are the belt-and-braces for a host where mod_rewrite is unavailable.
+#
+# The cleaner fix remains repointing the Document Root at a deploy directory and
+# letting .cpanel.yml copy dist/ into it. This file is the fallback, and it is
+# harmless once that happens (a docroot that is not the checkout never reads it).
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Already inside the build output — serve it and stop.
+  RewriteRule ^dist/ - [L]
+
+  # Everything else maps into the build output.
+  # Path-relative on purpose (no leading slash, no REQUEST_URI): this then works
+  # whether the checkout is the docroot or sits in a subdirectory.
+  RewriteRule ^(.*)$ dist/$1 [L]
+</IfModule>
+
+# Fallback for a host without mod_rewrite: the rewrite above is what hides the
+# sources, so without it these must be denied outright.
+<IfModule !mod_rewrite.c>
+  <FilesMatch "\.(json|jsx?|mjs|yml|yaml|md|lock|kt|gradle)$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+
+# True regardless of mod_rewrite: repository metadata is never web content.
+<IfModule mod_alias.c>
+  RedirectMatch 404 (?i)/\.(git|env)(/|$)
+</IfModule>

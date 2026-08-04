@@ -77,11 +77,19 @@ foreach ((glob("$cacheDir/$key.*.cache") ?: []) as $hit) {
     }
 }
 
-// Fetch the original, with the same hardening as charts.php.
+// Fetch the original, with the same hardening as charts.php. The intranet
+// host is routinely slow and sometimes barely alive, so there is no hard
+// total timeout a healthy transfer could hit — instead a stall detector
+// (under 1 KB/s for 20s) kills genuinely dead transfers while a slow but
+// flowing multi-MB download is allowed to finish. set_time_limit so PHP's
+// own 30s default cannot kill the script mid-transfer.
+set_time_limit(180);
 $ch = curl_init($src);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER  => true,
-    CURLOPT_TIMEOUT         => 25,
+    CURLOPT_TIMEOUT         => 120,
+    CURLOPT_LOW_SPEED_LIMIT => 1024,
+    CURLOPT_LOW_SPEED_TIME  => 20,
     CURLOPT_CONNECTTIMEOUT  => 10,
     CURLOPT_FOLLOWLOCATION  => true,
     CURLOPT_MAXREDIRS       => 2,

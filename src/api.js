@@ -20,6 +20,25 @@ function clean(value) {
   return value
 }
 
+// Photo captions are the SUBJECT LINE of the email the `postscoreboard` watcher
+// picked up, so they arrive with whatever the sender wrote around the trigger
+// word. The watcher strips its own "scoreboard" keyword but nothing else, which
+// left titles like "please - Ryan at Longreach yesterday" on the TV.
+//
+// Deliberately conservative: a filler word is only removed when a separator
+// follows it, because that is what marks it as an instruction to the watcher
+// rather than part of the sentence. "Thank you Tim for your DAFF washing
+// efforts!" is a real caption and must survive untouched.
+// A RUN of filler words then a separator, so "scoreboard please - X" is handled
+// as one unit (the watcher happens to strip "scoreboard" itself today, but that
+// is its behaviour to change, not a guarantee).
+const SUBJECT_NOISE = /^(?:\s*(?:scoreboard|please|pls|fyi|hi|hello)\b)+\s*[-–—:|,]+\s*/i
+export function stripSubjectNoise(title) {
+  if (typeof title !== 'string') return title
+  const out = title.replace(SUBJECT_NOISE, '').trim()
+  return out || title.trim() // never blank the caption entirely
+}
+
 // Intranet photos are full-size uploads (2500px+, multi-MB) on a slow host —
 // measured at 5–14s per image from the TV. Rewrite them to our resizing,
 // caching proxy so they arrive same-origin at ≤1920px. Absolute URL on

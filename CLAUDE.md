@@ -126,6 +126,18 @@ over half the attributions were wrong), quote-aggregator sites are not evidence,
 every author needs a portrait so the face always matches the name, and array
 order is rotation order. `npm run quotes` self-checks for consecutive-day repeats.
 
+**Photo captions are email subject lines, so treat them as untrusted text.**
+The `postscoreboard` watcher turns the subject of a forwarded email into the
+caption; it strips its own `scoreboard` trigger word but nothing else, so
+whatever the sender wrote around it arrives too ("please - Ryan at Longreach
+yesterday" reached the TV). `stripSubjectNoise()` in `api.js` removes a leading
+run of filler words, but **only when a separator follows** — that is what marks
+them as an instruction to the watcher rather than part of the sentence. Do not
+make it greedier: "Thank you Tim for your DAFF washing efforts!" and "Please
+welcome our new driver" are real captions that must survive untouched. The root
+fix belongs in the watcher, which is out of scope for this repo; this is a
+display-side guard.
+
 **The Ideas Winner slide must never show the winner's name or photo** — the
 teaser deliberately drives people to the intranet to find out.
 

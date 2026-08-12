@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { useScoreboardData } from './useScoreboardData.js'
+import { stripSubjectNoise } from './api.js'
 import { useFitTransform } from './useFitTransform.js'
 import { resolveQuote } from './logic/logisticsQuotes.js'
 import { collectImageUrls, preloadImages } from './preloadImages.js'
@@ -23,7 +24,15 @@ function photosOf(posts, tag) {
   if (!post) return []
   const out = []
   for (const key of ['featured_image', 'image_2', 'image_3']) {
-    if (post[key]) out.push({ src: post[key], title: post.title, desc: post.description, tag })
+    if (post[key]) {
+      out.push({
+        src: post[key],
+        // Captions come from an email subject line — see stripSubjectNoise.
+        title: stripSubjectNoise(post.title),
+        desc: post.description,
+        tag,
+      })
+    }
   }
   return out
 }

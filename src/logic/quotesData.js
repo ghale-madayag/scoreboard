@@ -43,12 +43,46 @@ export { weekdaySeed, pickForWeekday }
 // Franklin's maxims are quoted verbatim from "The Way to Wealth" (1758), which
 // collects his own Poor Richard's Almanack proverbs. Only the era's decorative
 // mid-sentence Capitalisation has been normalised — no words changed.
+//
+// BALANCE: no author may hold more than ~25% of the list. An earlier version
+// carried 9 Franklin maxims out of 21 (43%) — with the every-other-slot
+// spacing that satisfied rule 4, his face was on the board two or three times
+// every single week and it read as "always the same guy". Franklin dropped to
+// his four strongest business maxims (the other five are parked below, still
+// verified, if the list ever needs to grow back). 16 entries also means the
+// cycle length is coprime-ish with the 5-day week (16 mod 5 = 1), so no
+// author settles onto a fixed weekday.
+//
+// Parked, verified, re-addable — all Poor Richard's / The Way to Wealth 1758:
+//   "A little neglect may breed great mischief."
+//   "There are no gains without pains."
+//   "One to-day is worth two to-morrows."
+//   "Little strokes fell great oaks."
+//   "Sloth makes all things difficult, but industry all easy."
 export const QUOTES = [
+  {
+    text: 'By leadership we mean the art of getting someone else to do something that you want done because he wants to do it.',
+    author: 'Dwight D. Eisenhower',
+    portrait: 'eisenhower',
+    source: 'Remarks at the Society for Personnel Administration, 12 May 1954 (Eisenhower Library)',
+  },
   {
     text: 'Lost time is never found again.',
     author: 'Benjamin Franklin',
     portrait: 'franklin',
     source: "Poor Richard Improved, 1748; collected in The Way to Wealth, 1758",
+  },
+  {
+    text: 'Far and away the best prize that life offers is the chance to work hard at work worth doing.',
+    author: 'Theodore Roosevelt',
+    portrait: 'roosevelt',
+    source: '"The Square Deal", Labor Day speech, Syracuse NY, 7 Sept 1903 (American Presidency Project)',
+  },
+  {
+    text: 'Genius is one percent inspiration, ninety-nine percent perspiration.',
+    author: 'Thomas Edison',
+    portrait: 'edison',
+    source: "Reported by M. A. Rosanoff, Harper's Monthly Magazine, Sept 1932; earlier variants 1898–1901",
   },
   {
     text: 'Amateurs talk about strategy and tactics. Professionals talk about logistics and sustainability in warfare.',
@@ -63,28 +97,10 @@ export const QUOTES = [
     source: "Poor Richard's Almanack; collected in The Way to Wealth, 1758",
   },
   {
-    text: 'Genius is one percent inspiration, ninety-nine percent perspiration.',
-    author: 'Thomas Edison',
-    portrait: 'edison',
-    source: "Reported by M. A. Rosanoff, Harper's Monthly Magazine, Sept 1932; earlier variants 1898–1901",
-  },
-  {
-    text: 'A little neglect may breed great mischief.',
-    author: 'Benjamin Franklin',
-    portrait: 'franklin',
-    source: "Poor Richard's Almanack; collected in The Way to Wealth, 1758",
-  },
-  {
-    text: 'Far and away the best prize that life offers is the chance to work hard at work worth doing.',
+    text: 'A policy of words unbacked by deeds is considerably worse than useless.',
     author: 'Theodore Roosevelt',
     portrait: 'roosevelt',
-    source: '"The Square Deal", Labor Day speech, Syracuse NY, 7 Sept 1903 (American Presidency Project)',
-  },
-  {
-    text: 'Beware of little expenses; a small leak will sink a great ship.',
-    author: 'Benjamin Franklin',
-    portrait: 'franklin',
-    source: "Poor Richard's Almanack; collected in The Way to Wealth, 1758",
+    source: 'Letter to Professor J. W. Jenke, Cornell University (Theodore Roosevelt Center)',
   },
   {
     text: 'Plans are worthless, but planning is everything.',
@@ -93,7 +109,7 @@ export const QUOTES = [
     source: 'Remarks at the National Defense Executive Reserve Conference, 14 Nov 1957 (Eisenhower Library)',
   },
   {
-    text: 'There are no gains without pains.',
+    text: 'Beware of little expenses; a small leak will sink a great ship.',
     author: 'Benjamin Franklin',
     portrait: 'franklin',
     source: "Poor Richard's Almanack; collected in The Way to Wealth, 1758",
@@ -105,10 +121,10 @@ export const QUOTES = [
     source: 'The Art of War (Summary of the Art of War, 1838), ch. VI, art. XLI',
   },
   {
-    text: 'Diligence is the mother of good luck.',
-    author: 'Benjamin Franklin',
-    portrait: 'franklin',
-    source: "Poor Richard's Almanack; collected in The Way to Wealth, 1758",
+    text: 'As soon as a man ceases to improve, he goes backward.',
+    author: 'Theodore Roosevelt',
+    portrait: 'roosevelt',
+    source: 'Letter to his son Archie (Theodore Roosevelt Center)',
   },
   {
     text: 'Our greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.',
@@ -117,19 +133,7 @@ export const QUOTES = [
     source: 'Confirmed by the Thomas Edison Center at Menlo Park (Snopes fact-check); original context not located',
   },
   {
-    text: 'One to-day is worth two to-morrows.',
-    author: 'Benjamin Franklin',
-    portrait: 'franklin',
-    source: "Poor Richard's Almanack; collected in The Way to Wealth, 1758",
-  },
-  {
-    text: 'As soon as a man ceases to improve, he goes backward.',
-    author: 'Theodore Roosevelt',
-    portrait: 'roosevelt',
-    source: 'Letter to his son Archie (Theodore Roosevelt Center)',
-  },
-  {
-    text: 'Little strokes fell great oaks.',
+    text: 'Diligence is the mother of good luck.',
     author: 'Benjamin Franklin',
     portrait: 'franklin',
     source: "Poor Richard's Almanack; collected in The Way to Wealth, 1758",
@@ -141,34 +145,16 @@ export const QUOTES = [
     source: 'Letter to his son, 6 June 1944 (Oxford Reference; cited in Sobel, The Fighting Pattons)',
   },
   {
-    text: 'Sloth makes all things difficult, but industry all easy.',
-    author: 'Benjamin Franklin',
-    portrait: 'franklin',
-    source: "Poor Richard's Almanack; collected in The Way to Wealth, 1758",
+    text: 'It does not make any difference what work the man is doing if he does it well.',
+    author: 'Theodore Roosevelt',
+    portrait: 'roosevelt',
+    source: 'Speech on the fundamental virtues of citizenship (Theodore Roosevelt Center)',
   },
   {
     text: 'The history of failure in war can almost be summed up in two words: too late.',
     author: 'Gen. Douglas MacArthur',
     portrait: 'macarthur',
     source: 'Statement of 1940, quoted in James B. Reston, Prelude to Victory (1942), p. 64',
-  },
-  {
-    text: 'A policy of words unbacked by deeds is considerably worse than useless.',
-    author: 'Theodore Roosevelt',
-    portrait: 'roosevelt',
-    source: 'Letter to Professor J. W. Jenke, Cornell University (Theodore Roosevelt Center)',
-  },
-  {
-    text: 'By leadership we mean the art of getting someone else to do something that you want done because he wants to do it.',
-    author: 'Dwight D. Eisenhower',
-    portrait: 'eisenhower',
-    source: 'Remarks at the Society for Personnel Administration, 12 May 1954 (Eisenhower Library)',
-  },
-  {
-    text: 'It does not make any difference what work the man is doing if he does it well.',
-    author: 'Theodore Roosevelt',
-    portrait: 'roosevelt',
-    source: 'Speech on the fundamental virtues of citizenship (Theodore Roosevelt Center)',
   },
 ]
 

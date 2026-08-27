@@ -71,7 +71,7 @@ export default function App() {
 
     const KB_VARIANTS = ['kb-in', 'kb-right', 'kb-out', 'kb-left']
     const photos = [
-      ...photosOf(data.photos1, 'Weekly Challenge'),
+      ...photosOf(data.photos1, 'On the Ground'),
       ...photosOf(data.photos2, 'On the Ground'),
       ...photosOf(data.photos3, 'On the Ground'),
     ].map((p, i) => ({

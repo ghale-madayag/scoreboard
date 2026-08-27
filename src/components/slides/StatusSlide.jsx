@@ -24,7 +24,7 @@ export default function StatusSlide({ item }) {
         <div className="daw2-block">
           <div className="daw2-tagrow" data-gsap="rise" data-gsap-delay="0.15">
             <i className="daw2-diamond" />
-            <span className="daw2-tag">Today</span>
+            <span className="daw2-tag">On the Ground</span>
           </div>
           <div className="daw2-title" data-gsap="words" data-gsap-delay="0.3">{item.title}</div>
           {item.description && <div className="daw2-caption" data-gsap="rise" data-gsap-delay="0.6">{item.description}</div>}

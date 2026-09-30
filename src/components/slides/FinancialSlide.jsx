@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import GrossProfitChart from '../GrossProfitChart.jsx'
 import TvHeader from '../TvHeader.jsx'
 import { percentAchieved, targetComparison, chartSeries } from '../../logic/bonus.js'
@@ -40,8 +40,82 @@ function CountdownCard() {
   )
 }
 
-function BonusDonut({ gp, onTrack, paceLine }) {
-  const color = onTrack ? GREEN : RED
+const CONFETTI_COLORS = ['#4ADE97', '#7CEBB6', '#2E7DD1', '#7AB4F0', '#FFFFFF']
+const rand = (min, max) => min + Math.random() * (max - min)
+
+// Celebration layer for the % Achieved card, mounted only at 100%+. Two sets of
+// pieces, both pure CSS transform/opacity loops (no JS timers, no canvas, so the
+// TV's GPU only composites): a slow fall across the card, and a splash out of
+// the donut every 10s. Pieces are placed by measuring the card once, because
+// the stage's scale transform does not affect offset* measurements.
+function DonutConfetti() {
+  const ref = useRef(null)
+  const [box, setBox] = useState(null)
+
+  useLayoutEffect(() => {
+    const card = ref.current && ref.current.parentElement
+    const donut = card && card.querySelector('.fin2-donut')
+    if (!card || !donut) return
+    setBox({
+      height: card.offsetHeight,
+      originY: donut.offsetTop + donut.offsetHeight / 2,
+    })
+  }, [])
+
+  const pieces = useMemo(() => {
+    const fall = Array.from({ length: 26 }, () => {
+      const duration = rand(7, 12)
+      return {
+        left: `${rand(2, 98)}%`,
+        w: rand(6, 11), h: rand(4, 7),
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        duration, delay: -rand(0, duration),
+        dx: rand(-40, 40), spin: rand(360, 900) * (Math.random() < 0.5 ? -1 : 1),
+      }
+    })
+    const burst = Array.from({ length: 36 }, () => {
+      const angle = -Math.PI / 2 + rand(-1.25, 1.25)
+      const dist = rand(120, 230)
+      return {
+        w: rand(6, 11), h: rand(4, 7),
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        tx: Math.cos(angle) * dist, ty: Math.sin(angle) * dist,
+        drop: rand(140, 260), spin: rand(360, 1080) * (Math.random() < 0.5 ? -1 : 1),
+      }
+    })
+    return { fall, burst }
+  }, [])
+
+  return (
+    <div className="fin2-confetti" ref={ref} aria-hidden="true">
+      {box && pieces.fall.map((p, i) => (
+        <i
+          key={`f${i}`}
+          className="fin2-cf-fall"
+          style={{
+            left: p.left, width: p.w, height: p.h, background: p.color,
+            animationDuration: `${p.duration}s`, animationDelay: `${p.delay}s`,
+            '--cf-y': `${box.height + 24}px`, '--cf-dx': `${p.dx}px`, '--cf-spin': `${p.spin}deg`,
+          }}
+        />
+      ))}
+      {box && pieces.burst.map((p, i) => (
+        <i
+          key={`b${i}`}
+          className="fin2-cf-burst"
+          style={{
+            top: box.originY, width: p.w, height: p.h, background: p.color,
+            '--cf-tx': `${p.tx}px`, '--cf-ty': `${p.ty}px`,
+            '--cf-drop': `${p.ty + p.drop}px`, '--cf-spin': `${p.spin}deg`,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function BonusDonut({ gp, onTrack, hit, paceLine }) {
+  const color = onTrack || hit ? GREEN : RED
   const r = 86
   const c = 2 * Math.PI * r
   const frac = gp != null ? Math.min(1, Math.max(0, gp / 100)) : 0
@@ -54,6 +128,7 @@ function BonusDonut({ gp, onTrack, paceLine }) {
 
   return (
     <div className="fin2-bonus">
+      {hit && <DonutConfetti />}
       <span className="card-beam b2" aria-hidden="true" />
       <div className="fin2-panel-title" data-gsap="words" data-gsap-delay="0.25">% Achieved</div>
       <div className="fin2-donut">
@@ -79,7 +154,13 @@ function BonusDonut({ gp, onTrack, paceLine }) {
         </div>
       </div>
       <div className="fin2-bonus-caption" data-gsap="rise" data-gsap-delay="0.45">Bonus Target as of Today</div>
-      {paceLine && <div className="fin2-pace" style={{ color }} data-gsap="rise" data-gsap-delay="0.6">{paceLine}</div>}
+      {paceLine && (
+        <div className="fin2-pace" style={hit ? undefined : { color }} data-gsap="rise" data-gsap-delay="0.6">
+          {/* The pulse runs on an inner span: a CSS animation on the outer div
+              would override GSAP's inline transform and kill the rise reveal. */}
+          {hit ? <span className="fin2-hit">{paceLine}</span> : paceLine}
+        </div>
+      )}
     </div>
   )
 }
@@ -101,11 +182,17 @@ export default function FinancialSlide({ grossProfit, jobs }) {
   const jc = jobsComparison(jobs)
   const reveal = useGsapReveal()
 
-  const paceLine = cmp
-    ? cmp.onTrack
-      ? 'Ahead of target pace'
-      : 'Behind target pace'
-    : null
+  // Target reached: judged on the same rounded figure the donut displays, so
+  // "100%" on screen always comes with the confetti and the "hit" wording.
+  const hit = gp != null && Math.round(gp) >= 100
+
+  const paceLine = hit
+    ? 'We hit the target!'
+    : cmp
+      ? cmp.onTrack
+        ? 'Ahead of target pace'
+        : 'Behind target pace'
+      : null
 
   const qName = quarterLabel().split(' ')[0]
 
@@ -116,7 +203,9 @@ export default function FinancialSlide({ grossProfit, jobs }) {
         : <span key="gp"><span className="down">▼</span>&nbsp; GP {Math.round(gp)}% — {-delta} PTS BEHIND LAST YEAR</span>
       : gp != null && <span key="gp">GP {Math.round(gp)}% THIS QUARTER</span>,
     jc && <span key="jobs">{jc.current} JOBS BOOKED THIS MONTH</span>,
-    gp != null && <span key="togo"><span className="up">{Math.max(0, 100 - Math.round(gp))}%</span>&nbsp; TO GO — EVERY JOB COUNTS</span>,
+    gp != null && (hit
+      ? <span key="togo"><span className="up">TARGET HIT</span>&nbsp; — EVERY JOB STILL COUNTS</span>
+      : <span key="togo"><span className="up">{Math.max(0, 100 - Math.round(gp))}%</span>&nbsp; TO GO — EVERY JOB COUNTS</span>),
     <span key="brand">ABSOLUTE RELIABILITY</span>,
   ].filter(Boolean)
 
@@ -169,7 +258,7 @@ export default function FinancialSlide({ grossProfit, jobs }) {
 
         <div className="fin2-right">
           <CountdownCard />
-          <BonusDonut gp={gp} onTrack={onTrack} paceLine={paceLine} />
+          <BonusDonut gp={gp} onTrack={onTrack} hit={hit} paceLine={paceLine} />
         </div>
       </div>
 

@@ -518,6 +518,80 @@ html, body {
 .fin2-donut-sub { font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 0.18em; color: #6E7F98; }
 .fin2-pace { font-size: 21px; font-weight: 600; text-align: center; }
 
+/* % Achieved celebration (DonutConfetti), rendered only at 100%+. Every piece
+   animates transform/opacity only; the leaving-slide rule pauses them. The layer
+   sits behind the card's content so the figure stays readable. */
+.fin2-confetti {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.fin2-bonus > :not(.fin2-confetti):not(.card-beam) { position: relative; z-index: 1; }
+.fin2-cf-fall,
+.fin2-cf-burst { position: absolute; display: block; border-radius: 1px; }
+.fin2-cf-fall {
+  top: -16px;
+  opacity: 0.8;
+  animation: cfFall linear infinite;
+}
+@keyframes cfFall {
+  from { transform: translate3d(0, 0, 0) rotate3d(1, 0.4, 0.2, 0deg); }
+  to   { transform: translate3d(var(--cf-dx), var(--cf-y), 0) rotate3d(1, 0.4, 0.2, var(--cf-spin)); }
+}
+/* One splash per 10s cycle: out of the donut in the first ~3s, then hidden. */
+.fin2-cf-burst {
+  left: 50%;
+  opacity: 0;
+  animation: cfBurst 10s 1s infinite both;
+}
+@keyframes cfBurst {
+  0%   { opacity: 0; transform: translate3d(0, 0, 0) scale(0.4) rotate(0deg); animation-timing-function: ease-out; }
+  3%   { opacity: 1; }
+  12%  { opacity: 1; transform: translate3d(var(--cf-tx), var(--cf-ty), 0) scale(1) rotate(calc(var(--cf-spin) * 0.4)); animation-timing-function: ease-in; }
+  30%  { opacity: 0; transform: translate3d(var(--cf-tx), var(--cf-drop), 0) scale(1) rotate(var(--cf-spin)); }
+  100% { opacity: 0; transform: translate3d(var(--cf-tx), var(--cf-drop), 0) scale(1) rotate(var(--cf-spin)); }
+}
+/* "We hit the target!" badge. Same construction as .win2-cta: the pill scales
+   (transform) and its glow sits on ::after where only opacity animates. */
+.fin2-hit {
+  display: inline-block;
+  position: relative;
+  padding: 12px 26px;
+  background: rgba(74, 222, 151, 0.14);
+  border: 1px solid rgba(74, 222, 151, 0.5);
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 24px;
+  color: #7CEBB6;
+  animation: hitPulse 2.4s ease-in-out infinite;
+}
+.fin2-hit::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 36px rgba(74, 222, 151, 0.55);
+  pointer-events: none;
+  opacity: 0.35;
+  animation: hitGlow 2.4s ease-in-out infinite;
+}
+@keyframes hitPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
+}
+@keyframes hitGlow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fin2-confetti { display: none; }
+  .fin2-hit, .fin2-hit::after { animation: none; }
+}
+
 .fin2-ticker {
   height: 72px;
   margin-top: 34px;

@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import GrossProfitChart from '../GrossProfitChart.jsx'
 import TvHeader from '../TvHeader.jsx'
-import { percentAchieved, targetComparison, chartSeries } from '../../logic/bonus.js'
+import { percentAchieved, targetComparison, chartSeries, isPreviousQuarterData } from '../../logic/bonus.js'
 import { jobsComparison } from '../../logic/jobs.js'
 import { quarterEndUtc, quarterLabel } from '../../logic/quarter.js'
 import { useCountUp } from '../../useCountUp.js'
@@ -114,7 +114,9 @@ function DonutConfetti() {
   )
 }
 
-function BonusDonut({ gp, onTrack, hit, paceLine }) {
+function BonusDonut({ gp, onTrack, hit, paceLine, awaiting }) {
+  // Awaiting data is not "behind pace": the red treatment would read as a bad
+  // quarter rather than an absent one, so the line stays the muted default.
   const color = onTrack || hit ? GREEN : RED
   const r = 86
   const c = 2 * Math.PI * r
@@ -155,7 +157,7 @@ function BonusDonut({ gp, onTrack, hit, paceLine }) {
       </div>
       <div className="fin2-bonus-caption" data-gsap="rise" data-gsap-delay="0.45">Bonus Target as of Today</div>
       {paceLine && (
-        <div className="fin2-pace" style={hit ? undefined : { color }} data-gsap="rise" data-gsap-delay="0.6">
+        <div className="fin2-pace" style={hit || awaiting ? undefined : { color }} data-gsap="rise" data-gsap-delay="0.6">
           {/* The pulse runs on an inner span: a CSS animation on the outer div
               would override GSAP's inline transform and kill the rise reveal. */}
           {hit ? <span className="fin2-hit">{paceLine}</span> : paceLine}
@@ -167,12 +169,19 @@ function BonusDonut({ gp, onTrack, hit, paceLine }) {
 
 // "TV Slide 1 – GP Performance" design, wired to live data.
 export default function FinancialSlide({ grossProfit, jobs }) {
-  const gp = grossProfit ? percentAchieved(grossProfit) : null
-  const cmp = grossProfit ? targetComparison(grossProfit) : null
+  // Azure keeps serving the finished quarter after the calendar has moved on
+  // (see isPreviousQuarterData). Treat that as no data rather than plotting it
+  // against the new quarter's axis - every figure below is quarter-scoped, so
+  // they all go together, and the slide says what it is waiting for.
+  const stale = isPreviousQuarterData(grossProfit)
+  const gpData = stale ? null : grossProfit
+
+  const gp = gpData ? percentAchieved(gpData) : null
+  const cmp = gpData ? targetComparison(gpData) : null
   const onTrack = cmp ? cmp.onTrack : false
 
   // Last Year's value at today's position on the chart.
-  const rows = grossProfit ? chartSeries(grossProfit) : []
+  const rows = gpData ? chartSeries(gpData) : []
   let lyAtToday = null
   rows.forEach((r) => {
     if (r.current != null && r.lastYear != null) lyAtToday = r.lastYear
@@ -186,17 +195,20 @@ export default function FinancialSlide({ grossProfit, jobs }) {
   // "100%" on screen always comes with the confetti and the "hit" wording.
   const hit = gp != null && Math.round(gp) >= 100
 
-  const paceLine = hit
-    ? 'We hit the target!'
-    : cmp
-      ? cmp.onTrack
-        ? 'Ahead of target pace'
-        : 'Behind target pace'
-      : null
-
   const qName = quarterLabel().split(' ')[0]
 
+  const paceLine = stale
+    ? `Awaiting ${qName} data`
+    : hit
+      ? 'We hit the target!'
+      : cmp
+        ? cmp.onTrack
+          ? 'Ahead of target pace'
+          : 'Behind target pace'
+        : null
+
   const tickerItems = [
+    stale && <span key="await">AWAITING {qName} FIGURES</span>,
     delta != null
       ? delta >= 0
         ? <span key="gp"><span className="up">▲</span>&nbsp; GP {Math.round(gp)}% — {delta} PTS AHEAD OF LAST YEAR</span>
@@ -253,12 +265,12 @@ export default function FinancialSlide({ grossProfit, jobs }) {
               )}
             </div>
           </div>
-          <GrossProfitChart items={grossProfit} />
+          <GrossProfitChart items={gpData} emptyLabel={stale ? `Awaiting ${qName} data` : undefined} />
         </div>
 
         <div className="fin2-right">
           <CountdownCard />
-          <BonusDonut gp={gp} onTrack={onTrack} hit={hit} paceLine={paceLine} />
+          <BonusDonut gp={gp} onTrack={onTrack} hit={hit} paceLine={paceLine} awaiting={stale} />
         </div>
       </div>
 

@@ -60,6 +60,37 @@ export function targetComparison(items, date = new Date()) {
   }
 }
 
+// The quarter label, chart axis and countdown are derived from the Sydney date
+// and roll over at midnight. The Azure payload does not: it keeps serving the
+// finished quarter until something upstream advances the reporting period. On
+// 2026-10-01 that combination drew Q3's completed 92-day series across the Q4
+// axis and announced "112% - We hit the target!" on day one of the quarter.
+//
+// Detect it by asking whether the data outruns the calendar: the index of the
+// last day carrying gross profit cannot exceed the days elapsed in the current
+// quarter. Compared on `Current > 0` rather than non-null, because the payload
+// pads with 0.0 rather than null, so a null-count would never shrink.
+//
+// GRACE covers an upstream posting a day ahead across the timezone gap. When
+// no day carries profit yet the answer is "cannot tell", which returns false -
+// a quiet real start to a quarter must never be mistaken for stale data.
+const STALE_GRACE_DAYS = 2
+
+export function lastProfitDayIndex(items) {
+  let last = -1
+  ;(items || []).forEach((item, i) => {
+    const c = item && item.Current
+    if (typeof c === 'number' && c > 0) last = i
+  })
+  return last
+}
+
+export function isPreviousQuarterData(items, date = new Date()) {
+  const last = lastProfitDayIndex(items)
+  if (last < 0) return false
+  return last > daysElapsedInQuarter(date) + STALE_GRACE_DAYS
+}
+
 // Chart series: Current vs Last Year (what the original chart displays),
 // trimmed to entries where either exists.
 export function chartSeries(items) {

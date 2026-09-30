@@ -10,11 +10,13 @@ const dayNum = (ms) =>
 
 // Step-style cumulative chart (design: "TV Slide 1 – GP Performance").
 // Current (green) vs Last Year (blue) with a pulsing marker on today.
-export default function GrossProfitChart({ items }) {
-  if (!items) return <div className="placeholder">Chart loading…</div>
+export default function GrossProfitChart({ items, emptyLabel }) {
+  // emptyLabel lets the caller say WHY there is nothing to draw - "Awaiting Q4
+  // data" is a very different message from "Chart loading…" on a wall display.
+  if (!items) return <div className="placeholder">{emptyLabel || 'Chart loading…'}</div>
 
   const rows = chartSeries(items)
-  if (rows.length < 2) return <div className="placeholder">No chart data yet</div>
+  if (rows.length < 2) return <div className="placeholder">{emptyLabel || 'No chart data yet'}</div>
 
   const W = 1180
   const H = 520

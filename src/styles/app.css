@@ -254,6 +254,54 @@ html, body {
   font-size: 22px;
 }
 
+/* The "awaiting data" state, unlike "Chart loading…", can hold the largest
+   panel on the board for days, so it is built to read from across the room:
+   a real panel in the same language as the countdown/bonus cards rather than
+   a line of grey text floating in an empty box. */
+.placeholder-notice { font-size: inherit; }
+.placeholder-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 44px 64px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: linear-gradient(160deg, rgba(46, 125, 209, 0.14), rgba(255, 255, 255, 0.02));
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+}
+.placeholder-text {
+  font-family: 'Archivo', 'Inter', sans-serif;
+  font-size: 54px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--heading);
+  line-height: 1.1;
+  text-align: center;
+}
+.placeholder-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+}
+/* Opacity only - a compositor-friendly property, per the TV's weak GPU. The
+   slow pulse is what distinguishes "waiting for something" from "broken". */
+.placeholder-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #4ADE97;
+  box-shadow: 0 0 12px rgba(74, 222, 151, 0.55);
+  animation: placeholder-pulse 2.4s ease-in-out infinite;
+}
+@keyframes placeholder-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
 .eyebrow {
   display: flex;
   align-items: center;

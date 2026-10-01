@@ -11,12 +11,25 @@ const dayNum = (ms) =>
 // Step-style cumulative chart (design: "TV Slide 1 – GP Performance").
 // Current (green) vs Last Year (blue) with a pulsing marker on today.
 export default function GrossProfitChart({ items, emptyLabel }) {
-  // emptyLabel lets the caller say WHY there is nothing to draw - "Awaiting Q4
-  // data" is a very different message from "Chart loading…" on a wall display.
-  if (!items) return <div className="placeholder">{emptyLabel || 'Chart loading…'}</div>
+  // emptyLabel lets the caller say WHY there is nothing to draw, and gets the
+  // loud treatment: "Chart loading…" is a flicker, but "Awaiting Q4 data" can
+  // sit on the wall for days and has to read from across the room.
+  const notice = (label, explained) => (
+    <div className={`placeholder${explained ? ' placeholder-notice' : ''}`}>
+      {explained ? (
+        <div className="placeholder-card">
+          <i className="placeholder-dot" aria-hidden="true" />
+          <div className="placeholder-text">{label}</div>
+          <div className="placeholder-sub">Updates automatically when the figures arrive</div>
+        </div>
+      ) : label}
+    </div>
+  )
+
+  if (!items) return notice(emptyLabel || 'Chart loading…', !!emptyLabel)
 
   const rows = chartSeries(items)
-  if (rows.length < 2) return <div className="placeholder">{emptyLabel || 'No chart data yet'}</div>
+  if (rows.length < 2) return notice(emptyLabel || 'No chart data yet', !!emptyLabel)
 
   const W = 1180
   const H = 520

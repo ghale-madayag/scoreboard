@@ -5,3 +5,5 @@ node_modules/
 # copies dist/ into the docroot. Always commit a fresh `npm run build` output.
 # Runtime cache the proxy writes next to itself — never commit it.
 dist/api/cache/
+# Dev-only last-good-cache for the charts middleware (mirrors charts.php).
+.cache/

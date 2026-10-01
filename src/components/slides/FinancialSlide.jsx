@@ -214,7 +214,7 @@ export default function FinancialSlide({ grossProfit, jobs }) {
         ? <span key="gp"><span className="up">▲</span>&nbsp; GP {Math.round(gp)}% — {delta} PTS AHEAD OF LAST YEAR</span>
         : <span key="gp"><span className="down">▼</span>&nbsp; GP {Math.round(gp)}% — {-delta} PTS BEHIND LAST YEAR</span>
       : gp != null && <span key="gp">GP {Math.round(gp)}% THIS QUARTER</span>,
-    jc && <span key="jobs">{jc.current} JOBS BOOKED THIS MONTH</span>,
+    jc && <span key="jobs">{jc.current} {jc.current === 1 ? 'JOB' : 'JOBS'} BOOKED THIS MONTH</span>,
     gp != null && (hit
       ? <span key="togo"><span className="up">TARGET HIT</span>&nbsp; — EVERY JOB STILL COUNTS</span>
       : <span key="togo"><span className="up">{Math.max(0, 100 - Math.round(gp))}%</span>&nbsp; TO GO — EVERY JOB COUNTS</span>),

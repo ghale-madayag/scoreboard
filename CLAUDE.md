@@ -180,7 +180,12 @@ Two independent checkouts, `dev-scoreboard.depthintranet.com` and
 setting — and that `/package.json` 404s, since the sources really are sitting
 in the docroot and only `.htaccess` hides them.
 
-`charts.php` is the only server code and the only thing with a security surface:
+`public/api/` holds the only server code: `charts.php` (Azure proxy), `img.php`
+(resizing image proxy) and `beat.php` (uptime log: `src/kiosk.js` posts a boot
+and a 5-minute heartbeat, `GET /api/beat.php?summary` lists each browser launch
+and how long it ran — the TV's Puffin keeps getting closed, and this is how to
+see when). All three cache beside themselves as `*.cache`, which `.htaccess`
+denies over HTTP. `charts.php` has the most security surface:
 a two-entry upstream whitelist, redirects capped at 2 and forced HTTPS-only
 (a whitelisted host can still redirect anywhere — that was an SSRF hole), a 60s
 cache in the system temp dir, and last-good-cache fallback on upstream failure.

@@ -130,27 +130,35 @@ foreach ($rows as $s) {
     $out[] = $row;
 }
 
-// One line per browser so the TV's pattern can be read at a glance. The
-// newest run is excluded from the run statistics while it is still going
-// (seen in the last 10 minutes) - it has not finished, so its length is not a
-// result yet.
+// One line per browser so the TV's pattern can be read at a glance. Each
+// session is judged live on its own (seen in the last 10 minutes - two
+// heartbeat intervals). Judging only the newest session got this wrong the
+// first time it mattered: Puffin started a second, short-lived page at 13:18
+// while the TV's 13:04 session was still checking in on schedule, so the
+// summary called the TV "not running" and counted its live run as finished.
+// Live runs are left out of the statistics - their length is not a result yet.
 $byBrowser = [];
-foreach ($runs as $b => $list) {
-    $lastRow = null;
-    foreach (array_reverse($rows) as $r) {
-        if ($r['browser'] === $b) { $lastRow = $r; break; }
+foreach ($rows as $r) {
+    $b = $r['browser'];
+    $byBrowser[$b] = $byBrowser[$b] ?? ['launches' => 0, 'running_now' => 0, 'finished' => []];
+    $byBrowser[$b]['launches']++;
+    if ((time() - $r['last']) < 600) {
+        $byBrowser[$b]['running_now']++;
+    } else {
+        $byBrowser[$b]['finished'][] = (int) round(($r['last'] - $r['start']) / 60);
     }
-    $live = $lastRow !== null && (time() - $lastRow['last']) < 600;
-    $finished = $live ? array_slice($list, 0, -1) : $list;
-    sort($finished);
-    $n = count($finished);
+}
+foreach ($byBrowser as $b => $agg) {
+    $f = $agg['finished'];
+    sort($f);
+    $n = count($f);
     $byBrowser[$b] = [
-        'launches'             => count($list),
-        'running_now'          => $live,
+        'launches'             => $agg['launches'],
+        'running_now'          => $agg['running_now'],
         'finished_runs'        => $n,
-        'median_run_minutes'   => $n ? ($n % 2 ? $finished[intdiv($n, 2)] : (int) round(($finished[$n / 2 - 1] + $finished[$n / 2]) / 2)) : null,
-        'shortest_run_minutes' => $n ? $finished[0] : null,
-        'longest_run_minutes'  => $n ? $finished[$n - 1] : null,
+        'median_run_minutes'   => $n ? ($n % 2 ? $f[intdiv($n, 2)] : (int) round(($f[$n / 2 - 1] + $f[$n / 2]) / 2)) : null,
+        'shortest_run_minutes' => $n ? $f[0] : null,
+        'longest_run_minutes'  => $n ? $f[$n - 1] : null,
     ];
 }
 

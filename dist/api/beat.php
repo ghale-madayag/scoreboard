@@ -100,22 +100,58 @@ if (is_file($log)) {
 $rows = array_values($sessions);
 usort($rows, fn ($a, $b) => $a['start'] <=> $b['start']);
 
+// Downtime is measured against the previous run IN THE SAME BROWSER. Several
+// devices can have the board open at once (the TV plus someone checking from
+// a laptop), and comparing against whichever session happened to start last
+// produced negative "downtime" whenever two of them overlapped.
 $out = [];
-foreach ($rows as $i => $s) {
+$prevLast = [];   // browser => last_seen of that browser's previous run
+$runs = [];       // browser => list of run lengths in minutes
+foreach ($rows as $s) {
+    $b = $s['browser'];
+    $ran = (int) round(($s['last'] - $s['start']) / 60);
     $row = [
         'started'      => date('D d M H:i', $s['start']),
         'last_seen'    => date('D d M H:i', $s['last']),
-        'ran_minutes'  => (int) round(($s['last'] - $s['start']) / 60),
+        'ran_minutes'  => $ran,
         'beats'        => $s['beats'],
         'wake_lock'    => $s['wake_lock'],
-        'browser'      => $s['browser'],
+        'browser'      => $b,
     ];
-    if ($i > 0) {
-        // Time between the previous run going quiet and this one starting:
-        // roughly how long the TV sat on its launcher.
-        $row['down_minutes_before'] = (int) round(($s['start'] - $rows[$i - 1]['last']) / 60);
+    if (isset($prevLast[$b])) {
+        // Time between this browser's previous run going quiet and this one
+        // starting: for the TV, roughly how long it sat on its launcher. Never
+        // negative - an overlap within one browser type means two devices,
+        // not downtime.
+        $row['down_minutes_before'] = max(0, (int) round(($s['start'] - $prevLast[$b]) / 60));
     }
+    $prevLast[$b] = max($prevLast[$b] ?? 0, $s['last']);
+    $runs[$b][] = $ran;
     $out[] = $row;
 }
 
-echo json_encode(['sessions' => $out], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+// One line per browser so the TV's pattern can be read at a glance. The
+// newest run is excluded from the run statistics while it is still going
+// (seen in the last 10 minutes) - it has not finished, so its length is not a
+// result yet.
+$byBrowser = [];
+foreach ($runs as $b => $list) {
+    $lastRow = null;
+    foreach (array_reverse($rows) as $r) {
+        if ($r['browser'] === $b) { $lastRow = $r; break; }
+    }
+    $live = $lastRow !== null && (time() - $lastRow['last']) < 600;
+    $finished = $live ? array_slice($list, 0, -1) : $list;
+    sort($finished);
+    $n = count($finished);
+    $byBrowser[$b] = [
+        'launches'             => count($list),
+        'running_now'          => $live,
+        'finished_runs'        => $n,
+        'median_run_minutes'   => $n ? ($n % 2 ? $finished[intdiv($n, 2)] : (int) round(($finished[$n / 2 - 1] + $finished[$n / 2]) / 2)) : null,
+        'shortest_run_minutes' => $n ? $finished[0] : null,
+        'longest_run_minutes'  => $n ? $finished[$n - 1] : null,
+    ];
+}
+
+echo json_encode(['by_browser' => $byBrowser, 'sessions' => $out], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

@@ -13,7 +13,7 @@ export default function StatusSlide({ item }) {
     <div className="fin2 daw2" ref={reveal}>
       <div className="daw2-bg">
         {item.featured_image && (
-          <img className="daw2-img kb-out" src={item.featured_image} alt="" onError={hideOnError} />
+          <img decoding="async" className="daw2-img kb-out" src={item.featured_image} alt="" onError={hideOnError} />
         )}
         <div className="daw2-scrim" />
       </div>

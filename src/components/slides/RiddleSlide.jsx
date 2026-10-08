@@ -32,7 +32,7 @@ export default function RiddleSlide({ item }) {
           <div className="bc2-img-wrap">
             <div className="bc2-outline" />
             <div className="bc2-img">
-              <img src={image} alt="Brain challenge" onError={hideOnError} />
+              <img decoding="async" src={image} alt="Brain challenge" onError={hideOnError} />
             </div>
             <div className="gf2-qmark">?</div>
           </div>

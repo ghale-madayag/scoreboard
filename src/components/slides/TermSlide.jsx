@@ -32,7 +32,7 @@ export default function TermSlide({ item }) {
           <div className="tod2-img-wrap">
             <div className="tod2-outline" />
             <div className="tod2-img">
-              <img src={image} alt={item.word} onError={hideOnError} />
+              <img decoding="async" src={image} alt={item.word} onError={hideOnError} />
             </div>
           </div>
         )}

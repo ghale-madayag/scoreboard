@@ -27,7 +27,7 @@ export default function AwardeeSlide({ item }) {
             <div className="aw2-ring" />
             <div className="aw2-photo">
               {item._profile_image && (
-                <img src={item._profile_image} alt={item._employee_name} onError={hideOnError} />
+                <img decoding="async" src={item._profile_image} alt={item._employee_name} onError={hideOnError} />
               )}
             </div>
             <div className="aw2-star">★</div>

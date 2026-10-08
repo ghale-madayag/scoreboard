@@ -13,7 +13,7 @@ export default function PhotoSlide({ photo, kb = 'kb-in' }) {
   return (
     <div className="fin2 daw2" ref={reveal}>
       <div className="daw2-bg">
-        <img
+        <img decoding="async"
           className={`daw2-img ${kb}`}
           src={photo.src}
           alt={photo.title || 'Depth at Work'}

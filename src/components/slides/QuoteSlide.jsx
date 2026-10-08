@@ -23,12 +23,12 @@ export default function QuoteSlide({ item }) {
       <div className="quote2-bg">
         {portrait ? (
           <>
-            <img className="quote2-face" src={portrait} alt={item.author || ''} onError={hideOnError} />
+            <img decoding="async" className="quote2-face" src={portrait} alt={item.author || ''} onError={hideOnError} />
             <div className="quote2-face-fade" />
           </>
         ) : (
           <>
-            <img className="quote2-img kb-in" src={photo} alt="" onError={hideOnError} />
+            <img decoding="async" className="quote2-img kb-in" src={photo} alt="" onError={hideOnError} />
             <div className="quote2-scrim" />
           </>
         )}

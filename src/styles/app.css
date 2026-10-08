@@ -167,9 +167,16 @@ html, body {
   background: linear-gradient(90deg, #4ADE97, #2E7DD1);
   box-shadow: 0 0 10px rgba(74, 222, 151, 0.35);
   z-index: 45;
+  /* Full width, revealed by scaleX rather than animating width. This bar runs
+     on every slide for as long as the board is on, and a width animation
+     forced layout plus a repaint of the gradient and its glow on every frame,
+     forever - the most expensive continuous thing on the board. scaleX is
+     compositor-only: the bar is painted once and just stretched. */
+  width: 100%;
+  transform-origin: left center;
   animation: progress linear both;
 }
-@keyframes progress { from { width: 0; } to { width: 100%; } }
+@keyframes progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
 /* Bottom-RIGHT, not centered: every slide's footer strip (and the
    financial ticker) runs centered text along the bottom, so centered dots
@@ -185,9 +192,11 @@ html, body {
   z-index: 40;
   padding: 9px 16px;
   border-radius: 999px;
-  background: rgba(6, 11, 20, 0.72);
+  /* No backdrop-filter: it sits over Ken Burns photos on every photo slide,
+     so the blur had to be recomputed every frame the photo moved. A slightly
+     denser tint keeps it just as readable for a fraction of the cost. */
+  background: rgba(6, 11, 20, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
 }
 .dot {
   width: 11px; height: 11px;
@@ -655,7 +664,6 @@ html, body {
   display: flex;
   white-space: nowrap;
   animation: tickerScroll 36s linear infinite;
-  will-change: transform;
 }
 @keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .fin2-ticker-group {
@@ -675,7 +683,7 @@ html, body {
 /* ============ quote slide ("Focus of the Week" design) ============ */
 
 .quote2-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
-.quote2-img { width: 100%; height: 100%; object-fit: cover; display: block; will-change: transform; }
+.quote2-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .quote2-scrim {
   position: absolute;
   inset: 0;
@@ -745,8 +753,10 @@ html, body {
 .quote2-footer {
   height: 72px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(6, 11, 20, 0.55);
-  backdrop-filter: blur(8px);
+  /* Same reasoning as .slider-dots: this full-width strip sits over the quote
+     slide's Ken Burns backdrop, so blurring it meant a 1920px-wide blur per
+     frame. .win2-footer already ships unblurred; this matches it. */
+  background: rgba(6, 11, 20, 0.78);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1045,10 +1055,17 @@ html, body {
   border-radius: 5px;
   background: #E5484D;
   box-shadow: 0 0 20px rgba(229, 72, 77, 0.6);
+  width: 112%;
+  transform-origin: left center;
   transform: translateY(-50%) rotate(-6deg);
   animation: strikeDraw 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.9s both;
 }
-@keyframes strikeDraw { from { width: 0; } to { width: 112%; } }
+/* Drawn by scaleX along the already-rotated line rather than by width, so it
+   never triggers layout. */
+@keyframes strikeDraw {
+  from { transform: translateY(-50%) rotate(-6deg) scaleX(0); }
+  to   { transform: translateY(-50%) rotate(-6deg) scaleX(1); }
+}
 .mp2-possible {
   font-family: 'Archivo Expanded', 'Archivo', sans-serif;
   font-weight: 800;
@@ -1504,7 +1521,6 @@ html, body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  will-change: transform;
 }
 .daw2-scrim {
   position: absolute;
@@ -1569,7 +1585,6 @@ html, body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  will-change: transform;
 }
 /* Ken Burns variants — sized to be clearly visible within a 9–12s slide.
    Max pan offset stays inside the 1.12 overscale, so edges never show. */
@@ -1760,7 +1775,7 @@ html, body {
 
 /* ================= decorations ================= */
 
-.deco { position: absolute; z-index: 1; pointer-events: none; will-change: transform; }
+.deco { position: absolute; z-index: 1; pointer-events: none; }
 .deco-confetti { top: 0; left: 0; width: 480px; height: 400px; animation: drift 11s ease-in-out infinite; }
 .deco-blob { bottom: 0; right: 0; width: 500px; height: 400px; animation: drift 9s ease-in-out infinite reverse; }
 @keyframes drift {

@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchAll } from './api.js'
 import { sydneyToday, sydneyHour } from './logic/quarter.js'
+import { nightlyReloadDue } from './logic/reload.js'
+
+// One value per page load: what the nightly reload judges "already reloaded"
+// by (see logic/reload.js).
+const BOOTED_AT = Date.now()
 
 const POLL_MS = 4 * 60 * 1000
 const JITTER_MS = 30 * 1000
@@ -18,7 +23,6 @@ export function useScoreboardData() {
   const [ready, setReady] = useState(false)
   const failures = useRef(0)
   const day = useRef(sydneyToday())
-  const reloadedToday = useRef(false)
 
   useEffect(() => {
     let timer
@@ -62,15 +66,10 @@ export function useScoreboardData() {
       const today = sydneyToday()
       if (today !== day.current) {
         day.current = today
-        reloadedToday.current = false
         clearTimeout(timer)
         poll()
       }
-      const h = new Date().getHours() // TV-local time for the reload window
-      if (h === 3 && !reloadedToday.current) {
-        reloadedToday.current = true
-        window.location.reload()
-      }
+      if (nightlyReloadDue(new Date(), BOOTED_AT)) window.location.reload()
     }, 60 * 1000)
 
     poll()

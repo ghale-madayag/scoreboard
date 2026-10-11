@@ -43,7 +43,10 @@ resolves to `undefined` and the caller keeps its previous value, so one dead
 endpoint never blanks the board. `useScoreboardData.js` polls every 4 min ±30s
 jitter, exposes `{ data, lastUpdated, stale, ready }`, refetches on Sydney
 midnight rollover, and reloads the whole page once between 3–4 a.m. (TV-local)
-for memory hygiene and to pick up redeploys.
+for memory hygiene and to pick up redeploys. "Once" is decided by page uptime
+(`logic/reload.js`), not a flag: the original flag lived in a React ref, so each
+reload wiped it and the board reloaded every minute for the whole hour (~50
+times a night) until the launch log caught it.
 
 **Two upstreams.** JetEngine CCT endpoints on `depthintranet.com/wp-json/jet-cct/*`
 are public GETs with CORS already allowing this origin, so the browser calls them

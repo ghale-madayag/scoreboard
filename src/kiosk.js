@@ -106,6 +106,42 @@ async function checkForUpdate() {
   } catch { /* offline or server hiccup: try again next interval */ }
 }
 
+// ---- Drop signals ----------------------------------------------------------
+// Under Puffin the page runs on Puffin's servers and the TV only displays a
+// stream of it, so when the TV drops to its launcher the page carries on
+// checking in, healthy, for hours - the log could see launches but not the
+// moment the TV stopped watching. Two signals aim at that moment:
+//  - frames: how many frames the page actually painted in one second at each
+//    check-in. A page nothing is displaying is usually not composited at all,
+//    so this falls to 0.
+//  - visibility, sent the instant it changes, so a hide is timestamped to the
+//    second rather than to the next 5-minute check-in.
+// Both carry the slide on screen at the time, to show whether drops cluster
+// on particular content. Measuring costs one second of rAF every 5 minutes.
+
+function currentSlide() {
+  const el = document.querySelector('.slider-slide.active')
+  const key = el && el.dataset.slide
+  if (!key) return 'none'
+  return key.startsWith('photo-') ? 'photo' : key.slice(0, 24)
+}
+
+function countFrames(ms) {
+  return new Promise((resolve) => {
+    let frames = 0
+    let done = false
+    const tick = () => {
+      if (done) return
+      frames++
+      requestAnimationFrame(tick)
+    }
+    try { requestAnimationFrame(tick) } catch { /* no rAF: reports 0 */ }
+    // setTimeout, not rAF, ends the window: if nothing is painting, rAF never
+    // fires at all and this must still resolve.
+    setTimeout(() => { done = true; resolve(frames) }, ms)
+  })
+}
+
 export function startKiosk() {
   acquireWakeLock()
   document.addEventListener('visibilitychange', acquireWakeLock)
@@ -113,8 +149,8 @@ export function startKiosk() {
   const sid = randomHex()
   const device = deviceId()
   const t0 = Date.now()
-  const send = (ev) => {
-    const body = JSON.stringify({
+  const send = (ev, frames) => {
+    const payload = {
       ev,
       sid,
       up: Math.round((Date.now() - t0) / 1000),
@@ -122,7 +158,11 @@ export function startKiosk() {
       dev: device.id,
       dp: device.persisted ? 1 : 0,
       bld: BUILD,
-    })
+      vis: document.visibilityState === 'visible' ? 1 : 0,
+      sl: currentSlide(),
+    }
+    if (typeof frames === 'number') payload.fr = Math.min(frames, 1000)
+    const body = JSON.stringify(payload)
     try {
       if (navigator.sendBeacon) {
         navigator.sendBeacon('api/beat.php', new Blob([body], { type: 'application/json' }))
@@ -139,7 +179,19 @@ export function startKiosk() {
 
   // Give the wake-lock request a moment to settle so the boot record reports
   // whether it was granted.
-  setTimeout(() => send('boot'), 3000)
-  setInterval(() => send('beat'), BEAT_MS)
+  setTimeout(() => countFrames(1000).then((f) => send('boot', f)), 2000)
+  setInterval(() => countFrames(1000).then((f) => send('beat', f)), BEAT_MS)
+  // Debounced: report a visibility state only once it has held for 3 s. A
+  // drop is the screen going away and STAYING away; a flicker is not one, and
+  // a browser pane that flips states can otherwise send a dozen events in
+  // seconds - seen while testing this.
+  let visTimer = null
+  document.addEventListener('visibilitychange', () => {
+    clearTimeout(visTimer)
+    const state = document.visibilityState
+    visTimer = setTimeout(() => {
+      if (document.visibilityState === state) send('vis')
+    }, 3000)
+  })
   if (BUILD !== 'dev') setInterval(checkForUpdate, UPDATE_CHECK_MS)
 }

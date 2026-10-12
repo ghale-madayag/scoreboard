@@ -53,7 +53,9 @@ export default function Slider({ slides, defaultDuration = 12000 }) {
   return (
     <div className="slider">
       {slots.map((slot, si) => (
-        <div key={si} className={`slider-slide ${slot ? slot.cls : 'idle'}`}>
+        // data-slide lets src/kiosk.js report which slide is on screen when the
+        // TV stops drawing the page, so drops can be tied to specific content.
+        <div key={si} className={`slider-slide ${slot ? slot.cls : 'idle'}`} data-slide={slot ? slot.slide.key : undefined}>
           {slot && (
             <React.Fragment key={slot.slide.key}>{slot.slide.render()}</React.Fragment>
           )}

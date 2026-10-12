@@ -8,7 +8,15 @@
  * before the browser was closed, and how long the TV then sat on its launcher
  * until someone reopened it.
  *
- *   POST {ev:"boot"|"beat", sid:<16 hex>, up:<seconds>, wl:0|1}  -> 204
+ *   POST {ev:"boot"|"beat", sid:<16 hex>, up:<seconds>, wl:0|1,
+ *         dev:<16 hex>, dp:0|1, bld:<bundle hash>}             -> 204
+ *
+ * sid is one page load; dev is one BROWSER, remembered across reloads, so
+ * the summary can count TVs rather than pages (Puffin keeps abandoned pages
+ * running on its servers, so pages over-count). dp says whether that id
+ * actually persisted. bld is the bundle hash the page is running, which shows
+ * when the TV picks up a deploy. All three are optional: pages still on an
+ * older build send none of them.
  *   GET  ?summary                                                 -> JSON
  *
  * Public by necessity - the TV holds no credentials - so it accepts only
@@ -37,11 +45,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $sid = is_array($in) ? ($in['sid'] ?? null) : null;
     $up  = is_array($in) ? ($in['up'] ?? null) : null;
     $wl  = is_array($in) ? ($in['wl'] ?? 0) : 0;
+    $dev = is_array($in) ? ($in['dev'] ?? null) : null;
+    $dp  = is_array($in) ? ($in['dp'] ?? 0) : 0;
+    $bld = is_array($in) ? ($in['bld'] ?? null) : null;
 
     $valid = in_array($ev, ['boot', 'beat'], true)
         && is_string($sid) && preg_match('/^[0-9a-f]{16}$/', $sid)
         && is_int($up) && $up >= 0 && $up <= 30 * 86400
-        && ($wl === 0 || $wl === 1);
+        && ($wl === 0 || $wl === 1)
+        && ($dev === null || (is_string($dev) && preg_match('/^[0-9a-f]{16}$/', $dev)))
+        && ($dp === 0 || $dp === 1)
+        && ($bld === null || (is_string($bld) && preg_match('/^[A-Za-z0-9_-]{1,16}$/', $bld)));
     if (!$valid) {
         http_response_code(400);
         exit;
@@ -57,7 +71,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
     @file_put_contents(
         $log,
-        json_encode(['t' => time(), 'ev' => $ev, 'sid' => $sid, 'up' => $up, 'wl' => $wl, 'ua' => $ua]) . "\n",
+        json_encode(['t' => time(), 'ev' => $ev, 'sid' => $sid, 'up' => $up, 'wl' => $wl,
+            'dev' => $dev, 'dp' => $dp, 'bld' => $bld, 'ua' => $ua]) . "\n",
         FILE_APPEND | LOCK_EX
     );
     http_response_code(204);
@@ -83,6 +98,9 @@ if (is_file($log)) {
                 'beats'     => 0,
                 'wake_lock' => false,
                 'browser'   => stripos($ua, 'puffin') !== false ? 'Puffin' : (stripos($ua, 'wv') !== false ? 'WebView' : 'other'),
+                'device'    => isset($r['dev']) && is_string($r['dev']) ? $r['dev'] : null,
+                'persisted' => (int) ($r['dp'] ?? 0) === 1,
+                'build'     => isset($r['bld']) && is_string($r['bld']) ? $r['bld'] : null,
             ];
         }
         $s = &$sessions[$id];
@@ -117,6 +135,9 @@ foreach ($rows as $s) {
         'beats'        => $s['beats'],
         'wake_lock'    => $s['wake_lock'],
         'browser'      => $b,
+        // First 6 hex of the device id: plenty to tell a handful of TVs apart.
+        'device'       => $s['device'] !== null ? substr($s['device'], 0, 6) : null,
+        'build'        => $s['build'],
     ];
     if (isset($prevLast[$b])) {
         // Time between this browser's previous run going quiet and this one
@@ -162,4 +183,39 @@ foreach ($byBrowser as $b => $agg) {
     ];
 }
 
-echo json_encode(['by_browser' => $byBrowser, 'sessions' => $out], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+// Devices with at least one live page right now. This is the "how many TVs"
+// answer: several live pages from one device are one TV with abandoned pages
+// still running on Puffin's servers, not several TVs. Pages from builds older
+// than the device id are listed separately - they cannot be attributed.
+$devicesNow = [];
+$unattributed = [];
+foreach ($rows as $r) {
+    if ((time() - $r['last']) >= 600) {
+        continue;
+    }
+    if ($r['device'] === null) {
+        $unattributed[$r['browser']] = ($unattributed[$r['browser']] ?? 0) + 1;
+        continue;
+    }
+    $k = $r['device'];
+    $devicesNow[$k] = $devicesNow[$k] ?? [
+        'device'       => substr($k, 0, 6),
+        'browser'      => $r['browser'],
+        'id_persisted' => $r['persisted'],
+        'live_pages'   => 0,
+        'builds'       => [],
+    ];
+    $devicesNow[$k]['live_pages']++;
+    if ($r['build'] !== null && !in_array($r['build'], $devicesNow[$k]['builds'], true)) {
+        $devicesNow[$k]['builds'][] = $r['build'];
+    }
+}
+$tvsNow = count(array_filter($devicesNow, fn ($d) => $d['browser'] === 'Puffin'));
+
+echo json_encode([
+    'tvs_running_now'          => $tvsNow,
+    'devices_now'              => array_values($devicesNow),
+    'live_pages_without_id'    => $unattributed,
+    'by_browser'               => $byBrowser,
+    'sessions'                 => $out,
+], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

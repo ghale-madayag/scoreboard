@@ -31,18 +31,44 @@ async function acquireWakeLock() {
   }
 }
 
-function sessionId() {
+function randomHex() {
   const bytes = new Uint8Array(8)
   if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(bytes)
   else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256)
   return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+// One id per BROWSER, kept across reloads, so the log can count TVs rather
+// than pages. Pages over-count: every time Puffin is reopened it starts a new
+// page while the abandoned one keeps running on Puffin's servers - three live
+// pages one morning were almost certainly one TV. If storage is unavailable
+// the id is per-page and `persisted` says so, so a count built on it is never
+// mistaken for a real one.
+const DEVICE_KEY = 'sb-device'
+function deviceId() {
+  try {
+    let id = localStorage.getItem(DEVICE_KEY)
+    if (!id || !/^[0-9a-f]{16}$/.test(id)) {
+      id = randomHex()
+      localStorage.setItem(DEVICE_KEY, id)
+    }
+    return { id, persisted: localStorage.getItem(DEVICE_KEY) === id }
+  } catch {
+    return { id: randomHex(), persisted: false }
+  }
+}
+
+// The content hash Vite puts in the bundle's filename is exactly the build
+// identity that matters - it is what the deploy checks compare - and the
+// bundle can read it off its own URL. 'dev' under the dev server.
+const BUILD = (import.meta.url.match(/index-([A-Za-z0-9_-]+)\.js/) || [])[1] || 'dev'
+
 export function startKiosk() {
   acquireWakeLock()
   document.addEventListener('visibilitychange', acquireWakeLock)
 
-  const sid = sessionId()
+  const sid = randomHex()
+  const device = deviceId()
   const t0 = Date.now()
   const send = (ev) => {
     const body = JSON.stringify({
@@ -50,6 +76,9 @@ export function startKiosk() {
       sid,
       up: Math.round((Date.now() - t0) / 1000),
       wl: wakeLock ? 1 : 0,
+      dev: device.id,
+      dp: device.persisted ? 1 : 0,
+      bld: BUILD,
     })
     try {
       if (navigator.sendBeacon) {

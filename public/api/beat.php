@@ -300,6 +300,41 @@ foreach ($rows as $r) {
         ];
     }
 }
+// The drop the TV actually produced on 12 Oct: its page reported "shown" at
+// 12:35 Sydney and then simply stopped - no hidden event, no unpainted
+// frames, because Puffin tore the page down outright when the TV dropped.
+// So the commonest drop has to be read from silence: a TV page whose last
+// report said it was on screen, and which has since missed two check-ins.
+// The drop happened within 5 minutes after that last check-in.
+//
+// Not a drop: the same device starting a new page within 2 minutes (a
+// reload - nightly, auto-update, or by hand). back_after_minutes is when any
+// TV page next appeared: a few minutes means Puffin recovered by itself; a
+// long gap or null means it needed a person.
+$puffin = array_values(array_filter($rows, fn ($r) => $r['browser'] === 'Puffin'));
+foreach ($puffin as $i => $r) {
+    if ($r['device'] === null || $r['shown'] !== true || (time() - $r['last']) < 600) {
+        continue;
+    }
+    $next = null;
+    foreach ($puffin as $c) {
+        if ($c['start'] > $r['last'] && ($next === null || $c['start'] < $next['start'])) {
+            $next = $c;
+        }
+    }
+    if ($next !== null && $next['device'] === $r['device'] && ($next['start'] - $r['last']) <= 120) {
+        continue; // a reload, not a drop
+    }
+    $allDrops[] = [
+        't'                  => $r['last'],
+        'at'                 => date('D d M H:i', $r['last']),
+        'device'             => substr($r['device'], 0, 6),
+        'after_minutes'      => (int) round(($r['last'] - $r['start']) / 60),
+        'slide'              => $r['drawnSlide'],
+        'detected_by'        => 'went silent while on screen (within 5 min after "at")',
+        'back_after_minutes' => $next !== null ? (int) round(($next['start'] - $r['last']) / 60) : null,
+    ];
+}
 usort($allDrops, fn ($a, $b) => $a['t'] <=> $b['t']);
 $allDrops = array_map(function ($d) { unset($d['t']); return $d; }, array_slice($allDrops, -30));
 

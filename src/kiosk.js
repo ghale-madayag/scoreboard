@@ -63,6 +63,49 @@ function deviceId() {
 // bundle can read it off its own URL. 'dev' under the dev server.
 const BUILD = (import.meta.url.match(/index-([A-Za-z0-9_-]+)\.js/) || [])[1] || 'dev'
 
+// ---- Auto-update ----------------------------------------------------------
+// The TV never picked up deploys by itself: reopening Puffin reattaches to a
+// page already running on Puffin's servers instead of loading a fresh one, so
+// after a deploy the wall kept running the old build until someone found
+// Puffin's reload button. Instead, the page periodically fetches index.html
+// (never cached - see .htaccess), reads which bundle it now names, and
+// reloads itself onto a newer one.
+const UPDATE_CHECK_MS = 4 * 60 * 1000
+const TRIED_KEY = 'sb-update-tried'
+
+// Pure, so it can be checked in Node: the newer bundle hash index.html names,
+// or null if there is nothing to do.
+export function newBuildFrom(html, currentBuild) {
+  if (currentBuild === 'dev' || typeof html !== 'string') return null
+  const m = html.match(/assets\/index-([A-Za-z0-9_-]+)\.js/)
+  return m && m[1] !== currentBuild ? m[1] : null
+}
+
+async function checkForUpdate() {
+  try {
+    const res = await fetch(location.pathname, { cache: 'no-store' })
+    if (!res.ok) return
+    const next = newBuildFrom(await res.text(), BUILD)
+    if (!next) return
+
+    // Never reload twice for the same build. If a reload somehow lands back
+    // on the old bundle, retrying every 4 minutes would turn this into the
+    // same kind of reload loop the 3 a.m. job had.
+    try {
+      if (sessionStorage.getItem(TRIED_KEY) === next) return
+    } catch { /* no storage: the bundle check below is the remaining guard */ }
+
+    // Only reload onto files that are really there. A git pull that has
+    // updated index.html but not yet written the new bundle would otherwise
+    // reload the board into a 404 and a blank screen.
+    const js = await fetch(`assets/index-${next}.js`, { method: 'HEAD', cache: 'no-store' })
+    if (!js.ok) return
+
+    try { sessionStorage.setItem(TRIED_KEY, next) } catch { /* see above */ }
+    location.reload()
+  } catch { /* offline or server hiccup: try again next interval */ }
+}
+
 export function startKiosk() {
   acquireWakeLock()
   document.addEventListener('visibilitychange', acquireWakeLock)
@@ -98,4 +141,5 @@ export function startKiosk() {
   // whether it was granted.
   setTimeout(() => send('boot'), 3000)
   setInterval(() => send('beat'), BEAT_MS)
+  if (BUILD !== 'dev') setInterval(checkForUpdate, UPDATE_CHECK_MS)
 }

@@ -173,7 +173,11 @@ repo-root `.htaccess` rewrites every request into `dist/` (requests already
 under `dist/` are served as-is, which is what stops the rewrite looping).
 So `dist/` is **committed** — the host has no Node and cannot build — and
 publishing is `npm run build` → commit → push → *Update from Remote* in
-cPanel. There is deliberately no `.cpanel.yml`: the copy step is redundant
+cPanel. The TV then reloads itself onto the new build within ~4 minutes:
+`src/kiosk.js` re-reads `index.html` and reloads when it names a newer bundle
+that really exists (a half-written deploy is never reloaded into), at most
+once per build. Reopening Puffin does NOT reload — it reattaches to a page
+still running on Puffin's servers — so this is the only reliable path. There is deliberately no `.cpanel.yml`: the copy step is redundant
 under the rewrite, and removing it also removes cPanel's "Deploy HEAD Commit"
 button, which could otherwise be aimed at the wrong docroot.
 

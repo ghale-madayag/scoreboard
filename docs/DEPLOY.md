@@ -78,8 +78,11 @@ checkouts, so dev stays a real staging gate.
 - `/api/cacert.pem` returns 403
 - `index.html` carries `Cache-Control: no-cache`, `assets/*` carry `immutable`
 
-Then reload the page once on the TV, or let the nightly ~3 a.m. reload pick it
-up.
+The TV updates itself: every 4 minutes the board fetches `index.html`, and if
+it names a newer bundle that is actually present on the server, the board
+reloads onto it (`src/kiosk.js`). Expect the wall to switch within ~4 minutes
+of the pull, with no one touching the TV. Pages running a build older than
+that feature still need one manual reload, or the nightly ~3 a.m. reload.
 
 ### After a week of burn-in
 

@@ -78,9 +78,13 @@ checkouts, so dev stays a real staging gate.
 - `/api/cacert.pem` returns 403
 - `index.html` carries `Cache-Control: no-cache`, `assets/*` carry `immutable`
 
-The TV updates itself: every 4 minutes the board fetches `index.html`, and if
-it names a newer bundle that is actually present on the server, the board
-reloads onto it (`src/kiosk.js`). Expect the wall to switch within ~4 minutes
+**Auto-update is currently switched off** (`AUTO_UPDATE` in `src/kiosk.js`): the
+first two TV pages to run it died within minutes. Until it is re-enabled, a
+deploy reaches the TV at the nightly ~3 a.m. reload, or by opening
+`scoreboard.depthintranet.com/?tv` in Puffin (plain Reload / history reattach to
+the old page). When enabled, every 4 minutes the board fetches `index.html`, and
+if it names a newer bundle that is actually present on the server, the board
+reloads onto it. Expect the wall to switch within ~4 minutes
 of the pull, with no one touching the TV. Pages running a build older than
 that feature still need one manual reload, or the nightly ~3 a.m. reload.
 

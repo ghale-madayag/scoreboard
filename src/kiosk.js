@@ -71,6 +71,19 @@ const BUILD = (import.meta.url.match(/index-([A-Za-z0-9_-]+)\.js/) || [])[1] || 
 // (never cached - see .htaccess), reads which bundle it now names, and
 // reloads itself onto a newer one.
 const UPDATE_CHECK_MS = 4 * 60 * 1000
+
+// SWITCHED OFF 2026-10-12, pending investigation. The first two TV pages to
+// run this build both died within 5-10 minutes (Puffin, c3cc19 and ca7c27)
+// where earlier builds ran 3-8 hours between drops, and this check - first
+// firing at the 4-minute mark - was the only new action to run in both before
+// they died. Re-enable only once the TV has been stable without it. While it
+// is off, a deploy reaches the TV only via the nightly reload or a manual
+// reload (open scoreboard.depthintranet.com/?tv in Puffin).
+const AUTO_UPDATE = false
+
+// Same reasoning: the 1-second rAF frame count is the other new timed action.
+// Off, the drop signals rely on visibility alone, and silence while shown.
+const MEASURE_FRAMES = false
 const TRIED_KEY = 'sb-update-tried'
 
 // Pure, so it can be checked in Node: the newer bundle hash index.html names,
@@ -179,8 +192,13 @@ export function startKiosk() {
 
   // Give the wake-lock request a moment to settle so the boot record reports
   // whether it was granted.
-  setTimeout(() => countFrames(1000).then((f) => send('boot', f)), 2000)
-  setInterval(() => countFrames(1000).then((f) => send('beat', f)), BEAT_MS)
+  if (MEASURE_FRAMES) {
+    setTimeout(() => countFrames(1000).then((f) => send('boot', f)), 2000)
+    setInterval(() => countFrames(1000).then((f) => send('beat', f)), BEAT_MS)
+  } else {
+    setTimeout(() => send('boot'), 3000)
+    setInterval(() => send('beat'), BEAT_MS)
+  }
   // Debounced: report a visibility state only once it has held for 3 s. A
   // drop is the screen going away and STAYING away; a flicker is not one, and
   // a browser pane that flips states can otherwise send a dozen events in
@@ -193,5 +211,5 @@ export function startKiosk() {
       if (document.visibilityState === state) send('vis')
     }, 3000)
   })
-  if (BUILD !== 'dev') setInterval(checkForUpdate, UPDATE_CHECK_MS)
+  if (AUTO_UPDATE && BUILD !== 'dev') setInterval(checkForUpdate, UPDATE_CHECK_MS)
 }

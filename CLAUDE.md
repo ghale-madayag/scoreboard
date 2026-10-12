@@ -173,7 +173,10 @@ repo-root `.htaccess` rewrites every request into `dist/` (requests already
 under `dist/` are served as-is, which is what stops the rewrite looping).
 So `dist/` is **committed** — the host has no Node and cannot build — and
 publishing is `npm run build` → commit → push → *Update from Remote* in
-cPanel. The TV then reloads itself onto the new build within ~4 minutes:
+cPanel. Auto-update (below) is **switched off** since 2026-10-12 — the first two
+TV pages running it died within minutes — so deploys reach the TV at the nightly
+reload or via `/?tv` opened fresh in Puffin. When on, the TV reloads itself onto
+the new build within ~4 minutes:
 `src/kiosk.js` re-reads `index.html` and reloads when it names a newer bundle
 that really exists (a half-written deploy is never reloaded into), at most
 once per build. Reopening Puffin does NOT reload — it reattaches to a page
